@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { CloseIcon } from './icons';
 
 interface ConfirmDialogProps {
@@ -29,6 +29,8 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const messageId = useId();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -46,10 +48,14 @@ export function ConfirmDialog({
     <dialog
       ref={dialogRef}
       onClose={onCancel}
+      aria-labelledby={titleId}
+      aria-describedby={message ? messageId : undefined}
       className="w-[min(92vw,400px)] rounded-2xl border border-ink-200 bg-white p-0 text-ink-800 shadow-2xl backdrop:bg-ink-900/60 backdrop:backdrop-blur-sm dark:border-ink-700 dark:bg-ink-800 dark:text-ink-100"
     >
       <div className="flex items-center justify-between border-b border-ink-100 px-6 py-4 dark:border-ink-700">
-        <h3 className="text-base font-semibold">{title}</h3>
+        <h3 id={titleId} className="text-base font-semibold">
+          {title}
+        </h3>
         <button
           type="button"
           onClick={onCancel}
@@ -60,7 +66,7 @@ export function ConfirmDialog({
         </button>
       </div>
       {message && (
-        <p className="px-6 py-5 text-sm leading-relaxed text-ink-600 dark:text-ink-300">
+        <p id={messageId} className="px-6 py-5 text-sm leading-relaxed text-ink-600 dark:text-ink-300">
           {message}
         </p>
       )}

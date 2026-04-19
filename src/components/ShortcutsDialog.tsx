@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { CloseIcon } from './icons';
 
 interface Shortcut {
@@ -20,6 +20,7 @@ interface ShortcutsDialogProps {
 
 export function ShortcutsDialog({ open, onClose }: ShortcutsDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -32,10 +33,13 @@ export function ShortcutsDialog({ open, onClose }: ShortcutsDialogProps) {
     <dialog
       ref={dialogRef}
       onClose={onClose}
+      aria-labelledby={titleId}
       className="w-[min(92vw,420px)] rounded-2xl border border-ink-200 bg-white p-0 text-ink-800 shadow-2xl backdrop:bg-ink-900/60 backdrop:backdrop-blur-sm dark:border-ink-700 dark:bg-ink-800 dark:text-ink-100"
     >
       <div className="flex items-center justify-between border-b border-ink-100 px-6 py-4 dark:border-ink-700">
-        <h3 className="text-base font-semibold">键盘快捷键</h3>
+        <h3 id={titleId} className="text-base font-semibold">
+          键盘快捷键
+        </h3>
         <button
           onClick={onClose}
           aria-label="关闭"

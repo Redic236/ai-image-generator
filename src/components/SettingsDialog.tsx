@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
@@ -15,6 +15,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const { settings, updateSettings } = useSettings();
   const { showToast } = useToast();
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   const [apiKey, setApiKey] = useState(settings.apiKey);
   const [model, setModel] = useState<ImageModel>(settings.model);
 
@@ -41,11 +42,14 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     <dialog
       ref={dialogRef}
       onClose={onClose}
+      aria-labelledby={titleId}
       className="w-[min(92vw,440px)] rounded-2xl border border-ink-200 bg-white p-0 text-ink-800 shadow-2xl backdrop:bg-ink-900/60 backdrop:backdrop-blur-sm dark:border-ink-700 dark:bg-ink-800 dark:text-ink-100"
     >
       <form onSubmit={handleSubmit} className="flex flex-col">
         <div className="flex items-center justify-between border-b border-ink-100 px-6 py-4 dark:border-ink-700">
-          <h3 className="text-base font-semibold text-ink-800 dark:text-ink-100">设置</h3>
+          <h3 id={titleId} className="text-base font-semibold text-ink-800 dark:text-ink-100">
+            设置
+          </h3>
           <button
             type="button"
             onClick={onClose}
