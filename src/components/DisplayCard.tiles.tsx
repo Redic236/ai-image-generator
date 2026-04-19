@@ -180,7 +180,7 @@ function ErrorTile({ title, message, onRetry, onDismiss }: ErrorTileProps) {
       </p>
       <button
         onClick={onRetry}
-        className="mt-3 inline-flex items-center gap-1 rounded-lg bg-ink-800 px-3 py-1.5 text-[11px] font-medium text-white transition hover:bg-ink-700"
+        className="mt-3 inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-purple-600 to-pink-500 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:shadow-md"
       >
         <svg
           className="h-3 w-3"
