@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { SIZE_OPTIONS, STYLES } from '../lib/constants';
-import type { GenerateParams, ImageSize, ImageStyle } from '../types';
+import type { BatchCount, GenerateParams, ImageSize, ImageStyle } from '../types';
+
+const BATCH_OPTIONS: ReadonlyArray<{ value: BatchCount; label: string }> = [
+  { value: 1, label: '1 张' },
+  { value: 2, label: '2 张' },
+  { value: 4, label: '4 张' },
+];
 
 const EXAMPLE_PROMPTS = [
   '夕阳下的京都老街，樱花纷飞',
@@ -19,7 +25,7 @@ function charCountClass(length: number): string {
 interface PromptCardProps {
   promptValue: string;
   onPromptChange: (value: string) => void;
-  onGenerate: (params: GenerateParams) => void;
+  onGenerate: (params: GenerateParams, count: BatchCount) => void;
   onOptimize: (params: Pick<GenerateParams, 'prompt' | 'style'>) => void;
   isGenerating: boolean;
   isOptimizing: boolean;
@@ -35,13 +41,14 @@ export function PromptCard({
 }: PromptCardProps) {
   const [size, setSize] = useState<ImageSize>('1024x1024');
   const [style, setStyle] = useState<ImageStyle>('realistic');
+  const [count, setCount] = useState<BatchCount>(1);
 
   const busy = isGenerating || isOptimizing;
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
-      onGenerate({ prompt: promptValue, size, style });
+      onGenerate({ prompt: promptValue, size, style }, count);
     }
   };
 
@@ -130,6 +137,35 @@ export function PromptCard({
             ))}
           </div>
         </div>
+
+        <div>
+          <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-800">
+            <StepBadge n={4} />
+            生成数量
+            <span className="text-[11px] font-normal text-ink-400">
+              · 并发调用，多张会按倍数消耗配额
+            </span>
+          </p>
+          <div className="inline-flex rounded-xl border border-ink-200 bg-white/70 p-1">
+            {BATCH_OPTIONS.map((opt) => {
+              const selected = count === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setCount(opt.value)}
+                  className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+                    selected
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-sm'
+                      : 'text-ink-600 hover:text-ink-800'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -162,7 +198,7 @@ export function PromptCard({
           )}
         </button>
         <button
-          onClick={() => onGenerate({ prompt: promptValue, size, style })}
+          onClick={() => onGenerate({ prompt: promptValue, size, style }, count)}
           disabled={busy}
           className="group relative inline-flex flex-[1.5] items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500 px-5 py-3.5 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-[1px] hover:shadow-[0_24px_60px_-16px_rgba(236,72,153,0.55)] disabled:cursor-not-allowed disabled:opacity-70"
         >
@@ -186,7 +222,7 @@ export function PromptCard({
                   d="m5 12 4.24-4.24a4 4 0 0 1 5.66 0L19 12m-7 8v-8"
                 />
               </svg>
-              生成图片
+              {count === 1 ? '生成图片' : `生成 ${count} 张`}
             </>
           )}
         </button>

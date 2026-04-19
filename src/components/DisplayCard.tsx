@@ -4,23 +4,31 @@ import { formatRelativeTime, formatSize } from '../lib/format';
 import { STYLE_LABEL } from '../lib/constants';
 import { useToast } from '../context/ToastContext';
 import { Lightbox } from './Lightbox';
-import type { DisplayState, GenerateParams, HistoryItem } from '../types';
+import type { BatchTile, DisplayState, GenerateParams, HistoryItem, ImageSize } from '../types';
 
 interface DisplayCardProps {
   state: DisplayState;
-  onRetry: () => void;
   onGenerate: (params: GenerateParams) => void;
+  onRetryTile: (tileId: string) => void;
+  onDismissTile: (tileId: string) => void;
 }
 
-export function DisplayCard({ state, onRetry, onGenerate }: DisplayCardProps) {
+export function DisplayCard({ state, onGenerate, onRetryTile, onDismissTile }: DisplayCardProps) {
   const { showToast } = useToast();
   const [downloading, setDownloading] = useState(false);
 
-  const hasImage = state.type === 'image';
+  // "Primary" = first successful tile in the current batch. Header actions act on it.
+  const primaryTile: Extract<BatchTile, { status: 'image' }> | null =
+    state.type === 'batch'
+      ? (state.tiles.find((t): t is Extract<BatchTile, { status: 'image' }> =>
+          t.status === 'image'
+        ) ?? null)
+      : null;
+  const hasImage = !!primaryTile;
 
   const handleDownload = async () => {
-    if (state.type !== 'image') return;
-    const { imageUrl } = state.item;
+    if (!primaryTile) return;
+    const { imageUrl } = primaryTile.item;
     const filename = `ai-image-${Date.now()}.png`;
     setDownloading(true);
     try {
@@ -45,9 +53,9 @@ export function DisplayCard({ state, onRetry, onGenerate }: DisplayCardProps) {
   };
 
   const handleCopyPrompt = async () => {
-    if (state.type !== 'image') return;
+    if (!primaryTile) return;
     try {
-      await navigator.clipboard.writeText(state.item.prompt);
+      await navigator.clipboard.writeText(primaryTile.item.prompt);
       showToast('提示词已复制');
     } catch {
       showToast('复制失败，请手动选择文本');
@@ -55,11 +63,11 @@ export function DisplayCard({ state, onRetry, onGenerate }: DisplayCardProps) {
   };
 
   const handleRegenerate = () => {
-    if (state.type !== 'image') return;
+    if (!primaryTile) return;
     onGenerate({
-      prompt: state.item.prompt,
-      size: state.item.size,
-      style: state.item.style,
+      prompt: primaryTile.item.prompt,
+      size: primaryTile.item.size,
+      style: primaryTile.item.style,
     });
   };
 
@@ -86,7 +94,7 @@ export function DisplayCard({ state, onRetry, onGenerate }: DisplayCardProps) {
                 </svg>
                 复制提示词
               </IconButton>
-              <IconButton onClick={handleRegenerate} title="用相同参数重新生成">
+              <IconButton onClick={handleRegenerate} title="用相同参数重新生成一张">
                 <svg
                   className="h-3.5 w-3.5"
                   viewBox="0 0 24 24"
@@ -136,25 +144,32 @@ export function DisplayCard({ state, onRetry, onGenerate }: DisplayCardProps) {
         </div>
       </div>
 
-      <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-ink-200 bg-ink-50 md:aspect-[4/3]">
-        {state.type === 'empty' && <EmptyState />}
-        {state.type === 'loading' && <LoadingState />}
-        {state.type === 'image' && <ImageSlot item={state.item} />}
-        {state.type === 'error' && (
-          <ErrorState title={state.title} message={state.message} onRetry={onRetry} />
-        )}
-      </div>
+      {state.type === 'empty' && (
+        <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-ink-200 bg-ink-50 md:aspect-[4/3]">
+          <EmptyState />
+        </div>
+      )}
 
-      {state.type === 'image' && (
+      {state.type === 'batch' && (
+        <BatchGrid state={state} onRetryTile={onRetryTile} onDismissTile={onDismissTile} />
+      )}
+
+      {primaryTile && (
         <div className="mt-4 flex items-center justify-between text-xs text-ink-500">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-ink-100 px-2.5 py-1">
-              {formatSize(state.item.size)}
+              {formatSize(primaryTile.item.size)}
             </span>
             <span className="rounded-full bg-ink-100 px-2.5 py-1">
-              {STYLE_LABEL[state.item.style]}
+              {STYLE_LABEL[primaryTile.item.style]}
             </span>
-            <span className="text-ink-400">{formatRelativeTime(state.item.createdAt)}</span>
+            <span className="text-ink-400">{formatRelativeTime(primaryTile.item.createdAt)}</span>
+            {state.type === 'batch' && state.tiles.length > 1 && (
+              <span className="text-ink-400">
+                · 本次共 {state.tiles.filter((t) => t.status === 'image').length}/
+                {state.tiles.length} 张
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -201,91 +216,65 @@ function Spinner({ className = '' }: { className?: string }) {
   );
 }
 
-function ImageSlot({ item }: { item: HistoryItem }) {
-  const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
-  const [reloadKey, setReloadKey] = useState(0);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-
-  // Reset to loading state whenever the item changes.
-  useEffect(() => {
-    setStatus('loading');
-    setLightboxOpen(false);
-  }, [item.id]);
-
-  if (status === 'error') {
-    return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-50 p-8 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-400 to-slate-500 shadow-lg">
-          <svg
-            className="h-7 w-7 text-white"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm-1.5-1.5L22 22"
-            />
-          </svg>
-        </div>
-        <p className="mt-4 text-sm font-semibold text-ink-700">图片暂不可用</p>
-        <p className="mt-1 max-w-sm text-xs leading-relaxed text-ink-500">
-          可能是网络波动或 CDN 临时失效。智谱 AI 图片 URL 通常在 30 天后失效。
-        </p>
-        <button
-          onClick={() => {
-            setStatus('loading');
-            setReloadKey((k) => k + 1);
-          }}
-          className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-medium text-ink-600 transition hover:border-purple-300 hover:text-purple-600"
-        >
-          <svg
-            className="h-3.5 w-3.5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
-            />
-          </svg>
-          重试加载
-        </button>
-      </div>
-    );
+function aspectClassFor(size: ImageSize): string {
+  switch (size) {
+    case '1024x1024':
+      return 'aspect-square';
+    case '1344x768':
+      return 'aspect-[7/4]';
+    case '768x1344':
+      return 'aspect-[4/7]';
   }
+}
+
+interface BatchGridProps {
+  state: Extract<DisplayState, { type: 'batch' }>;
+  onRetryTile: (tileId: string) => void;
+  onDismissTile: (tileId: string) => void;
+}
+
+function BatchGrid({ state, onRetryTile, onDismissTile }: BatchGridProps) {
+  const { params, tiles } = state;
+  const isSingle = tiles.length === 1;
+  const wrapperClass = isSingle ? '' : 'grid grid-cols-2 gap-2 md:gap-3';
+  const tileAspect = aspectClassFor(params.size);
 
   return (
-    <>
-      {status === 'loading' && (
-        <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-ink-100 via-white to-ink-100 bg-[length:1000px_100%]" />
-      )}
-      <img
-        key={`${item.id}-${reloadKey}`}
-        src={proxied(item.imageUrl)}
-        alt={item.prompt.slice(0, 60)}
-        decoding="async"
-        onLoad={() => setStatus('ok')}
-        onError={() => setStatus('error')}
-        onClick={() => status === 'ok' && setLightboxOpen(true)}
-        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
-          status === 'ok' ? 'cursor-zoom-in opacity-100' : 'opacity-0'
-        }`}
-      />
-      {lightboxOpen && (
-        <Lightbox
-          src={proxied(item.imageUrl)}
-          alt={item.prompt.slice(0, 60)}
-          onClose={() => setLightboxOpen(false)}
-        />
-      )}
-    </>
+    <div className={wrapperClass}>
+      {tiles.map((tile) => (
+        <div
+          key={tile.tileId}
+          className={`group relative w-full overflow-hidden rounded-2xl border border-ink-200 bg-ink-50 ${tileAspect}`}
+        >
+          <TileContent
+            tile={tile}
+            onRetry={() => onRetryTile(tile.tileId)}
+            onDismiss={() => onDismissTile(tile.tileId)}
+          />
+        </div>
+      ))}
+    </div>
   );
+}
+
+interface TileContentProps {
+  tile: BatchTile;
+  onRetry: () => void;
+  onDismiss: () => void;
+}
+
+function TileContent({ tile, onRetry, onDismiss }: TileContentProps) {
+  if (tile.status === 'loading') return <LoadingTile />;
+  if (tile.status === 'error')
+    return (
+      <ErrorTile
+        title={tile.title}
+        message={tile.message}
+        onRetry={onRetry}
+        onDismiss={onDismiss}
+      />
+    );
+  return <ImageTile item={tile.item} onDismiss={onDismiss} />;
 }
 
 function EmptyState() {
@@ -311,13 +300,13 @@ function EmptyState() {
       </div>
       <p className="mt-6 text-sm font-medium text-ink-700">开始创作吧</p>
       <p className="mt-1 max-w-xs text-xs text-ink-400">
-        在上方输入图片描述，选择尺寸和风格，点击生成按钮即可获得 AI 创作的图片
+        在上方输入图片描述，选择尺寸、风格和数量，点击生成按钮即可
       </p>
     </div>
   );
 }
 
-function LoadingState() {
+function LoadingTile() {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     const start = Date.now();
@@ -327,52 +316,53 @@ function LoadingState() {
   const seconds = Math.floor(elapsed / 1000);
 
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-50 p-8">
+    <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-50 p-4">
       <div className="shimmer absolute inset-0 animate-shimmer" />
       <div className="relative flex flex-col items-center">
-        <div className="relative flex h-16 w-16 items-center justify-center">
+        <div className="relative flex h-14 w-14 items-center justify-center">
           <div className="absolute inset-0 animate-ping rounded-full bg-purple-500/30" />
           <div className="absolute inset-2 animate-ping rounded-full bg-pink-500/30 [animation-delay:0.4s]" />
-          <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 shadow-glow">
-            <svg className="h-5 w-5 animate-spin text-white" viewBox="0 0 24 24" fill="none">
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="3"
-              />
-              <path
-                className="opacity-80"
-                fill="currentColor"
-                d="M4 12a8 8 0 0 1 8-8v3a5 5 0 0 0-5 5H4Z"
-              />
-            </svg>
+          <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 shadow-glow">
+            <Spinner className="h-4 w-4 text-white" />
           </div>
         </div>
-        <p className="mt-5 text-sm font-semibold text-ink-800">AI 正在作画中...</p>
-        <p className="mt-1 text-xs text-ink-400">
-          {seconds > 0 ? `已耗时 ${seconds}s · ` : ''}
-          通常需要 10-30 秒
+        <p className="mt-4 text-xs font-semibold text-ink-800">AI 正在作画...</p>
+        <p className="mt-0.5 text-[11px] text-ink-400">
+          {seconds > 0 ? `${seconds}s · ` : ''}10-30 秒
         </p>
       </div>
     </div>
   );
 }
 
-interface ErrorStateProps {
+interface ErrorTileProps {
   title: string;
   message: string;
   onRetry: () => void;
+  onDismiss: () => void;
 }
 
-function ErrorState({ title, message, onRetry }: ErrorStateProps) {
+function ErrorTile({ title, message, onRetry, onDismiss }: ErrorTileProps) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-orange-500 shadow-[0_16px_40px_-12px_rgba(244,63,94,0.5)]">
+    <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+      <button
+        onClick={onDismiss}
+        aria-label="移除"
+        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md text-ink-400 opacity-60 transition hover:bg-rose-500/20 hover:text-rose-600 hover:opacity-100"
+      >
         <svg
-          className="h-8 w-8 text-white"
+          className="h-3.5 w-3.5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+        </svg>
+      </button>
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-orange-500 shadow-md">
+        <svg
+          className="h-5 w-5 text-white"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -385,14 +375,16 @@ function ErrorState({ title, message, onRetry }: ErrorStateProps) {
           />
         </svg>
       </div>
-      <p className="mt-5 text-sm font-semibold text-ink-800">{title}</p>
-      <p className="mt-1 max-w-sm text-xs leading-relaxed text-ink-500">{message}</p>
+      <p className="mt-3 text-xs font-semibold text-ink-800">{title}</p>
+      <p className="mt-1 line-clamp-2 max-w-[90%] text-[11px] leading-snug text-ink-500">
+        {message}
+      </p>
       <button
         onClick={onRetry}
-        className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-ink-800 px-4 py-2 text-xs font-medium text-white transition hover:bg-ink-700"
+        className="mt-3 inline-flex items-center gap-1 rounded-lg bg-ink-800 px-3 py-1.5 text-[11px] font-medium text-white transition hover:bg-ink-700"
       >
         <svg
-          className="h-3.5 w-3.5"
+          className="h-3 w-3"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -404,8 +396,124 @@ function ErrorState({ title, message, onRetry }: ErrorStateProps) {
             d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
           />
         </svg>
-        重试
+        重试此张
       </button>
     </div>
+  );
+}
+
+interface ImageTileProps {
+  item: HistoryItem;
+  onDismiss: () => void;
+}
+
+function ImageTile({ item, onDismiss }: ImageTileProps) {
+  const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
+  const [reloadKey, setReloadKey] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  useEffect(() => {
+    setStatus('loading');
+    setLightboxOpen(false);
+  }, [item.id]);
+
+  const handleDismissClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDismiss();
+  };
+
+  if (status === 'error') {
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-50 p-4 text-center">
+        <button
+          onClick={handleDismissClick}
+          aria-label="移除"
+          className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md bg-white/80 text-ink-400 backdrop-blur-sm transition hover:bg-rose-500/20 hover:text-rose-600"
+        >
+          <svg
+            className="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-slate-400 to-slate-500 shadow-lg">
+          <svg
+            className="h-6 w-6 text-white"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm-1.5-1.5L22 22"
+            />
+          </svg>
+        </div>
+        <p className="mt-3 text-xs font-semibold text-ink-700">图片暂不可用</p>
+        <p className="mt-1 max-w-[90%] text-[11px] leading-snug text-ink-500">
+          CDN 加载失败或图片已过期
+        </p>
+        <button
+          onClick={() => {
+            setStatus('loading');
+            setReloadKey((k) => k + 1);
+          }}
+          className="mt-3 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-[11px] font-medium text-ink-600 transition hover:border-purple-300 hover:text-purple-600"
+        >
+          重试加载
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {status === 'loading' && (
+        <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-ink-100 via-white to-ink-100 bg-[length:1000px_100%]" />
+      )}
+      <img
+        key={`${item.id}-${reloadKey}`}
+        src={proxied(item.imageUrl)}
+        alt={item.prompt.slice(0, 60)}
+        decoding="async"
+        onLoad={() => setStatus('ok')}
+        onError={() => setStatus('error')}
+        onClick={() => status === 'ok' && setLightboxOpen(true)}
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
+          status === 'ok' ? 'cursor-zoom-in opacity-100' : 'opacity-0'
+        }`}
+      />
+      {status === 'ok' && (
+        <button
+          onClick={handleDismissClick}
+          aria-label="删除这张"
+          title="删除这张"
+          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-md bg-black/40 text-white opacity-0 backdrop-blur-sm transition hover:bg-rose-500/80 group-hover:opacity-100 focus:opacity-100"
+        >
+          <svg
+            className="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
+      {lightboxOpen && (
+        <Lightbox
+          src={proxied(item.imageUrl)}
+          alt={item.prompt.slice(0, 60)}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
+    </>
   );
 }

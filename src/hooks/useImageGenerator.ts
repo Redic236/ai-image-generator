@@ -1,26 +1,88 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { generateImage } from '../services/zhipu';
 import { ApiError, friendlyError } from '../lib/errors';
 import { useHistory } from '../context/HistoryContext';
 import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
-import type { DisplayState, GenerateParams, HistoryItem } from '../types';
+import type {
+  BatchCount,
+  BatchTile,
+  DisplayState,
+  GenerateParams,
+  HistoryItem,
+} from '../types';
 
 interface UseImageGeneratorOptions {
   requestOpenSettings: () => void;
 }
 
+function makeTileId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function makeHistoryItem(params: GenerateParams, url: string): HistoryItem {
+  const now = Date.now();
+  return {
+    id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
+    prompt: params.prompt,
+    size: params.size,
+    style: params.style,
+    imageUrl: url,
+    createdAt: now,
+  };
+}
+
 export function useImageGenerator({ requestOpenSettings }: UseImageGeneratorOptions) {
   const [display, setDisplay] = useState<DisplayState>({ type: 'empty' });
   const [isGenerating, setIsGenerating] = useState(false);
-  const lastParamsRef = useRef<GenerateParams | null>(null);
 
   const { settings } = useSettings();
-  const { add: addHistory, setActiveId } = useHistory();
+  const { add: addHistory, remove: removeHistory, setActiveId } = useHistory();
   const { showToast } = useToast();
 
+  /** Update a single tile in the current batch display state, identified by tileId. */
+  const updateTile = useCallback((tileId: string, next: BatchTile) => {
+    setDisplay((prev) => {
+      if (prev.type !== 'batch') return prev;
+      return {
+        ...prev,
+        tiles: prev.tiles.map((t) => (t.tileId === tileId ? next : t)),
+      };
+    });
+  }, []);
+
+  const runOneTile = useCallback(
+    async (tileId: string, params: GenerateParams) => {
+      try {
+        const { url } = await generateImage({
+          ...params,
+          apiKey: settings.apiKey,
+          model: settings.model,
+        });
+        const item = makeHistoryItem(params, url);
+        addHistory(item);
+        // Last successful tile wins the sidebar highlight (acceptable — they're siblings).
+        setActiveId(item.id);
+        updateTile(tileId, { tileId, status: 'image', item });
+      } catch (err) {
+        if (err instanceof ApiError || err instanceof Error) {
+          const { title, message } = friendlyError(err);
+          updateTile(tileId, { tileId, status: 'error', title, message });
+        } else {
+          updateTile(tileId, {
+            tileId,
+            status: 'error',
+            title: '未知错误',
+            message: '请稍后重试。',
+          });
+        }
+      }
+    },
+    [settings, addHistory, setActiveId, updateTile]
+  );
+
   const generate = useCallback(
-    async (params: GenerateParams) => {
+    async (params: GenerateParams, count: BatchCount = 1) => {
       const prompt = params.prompt.trim();
       if (!prompt) {
         showToast('请先输入图片描述');
@@ -32,50 +94,63 @@ export function useImageGenerator({ requestOpenSettings }: UseImageGeneratorOpti
         return;
       }
 
-      const requestParams: GenerateParams = { ...params, prompt };
-      lastParamsRef.current = requestParams;
-      setDisplay({ type: 'loading' });
+      const finalParams: GenerateParams = { ...params, prompt };
+      const tiles: BatchTile[] = Array.from({ length: count }, () => ({
+        tileId: makeTileId(),
+        status: 'loading',
+      }));
+
+      // Clear active highlight so the first new success becomes active.
+      setActiveId(null);
+      setDisplay({ type: 'batch', params: finalParams, tiles });
       setIsGenerating(true);
 
-      try {
-        const { url } = await generateImage({
-          ...requestParams,
-          apiKey: settings.apiKey,
-          model: settings.model,
-        });
-        const now = Date.now();
-        const item: HistoryItem = {
-          id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
-          prompt,
-          size: params.size,
-          style: params.style,
-          imageUrl: url,
-          createdAt: now,
-        };
-        addHistory(item);
-        setActiveId(item.id);
-        setDisplay({ type: 'image', item });
-      } catch (err) {
-        if (err instanceof ApiError || err instanceof Error) {
-          const { title, message } = friendlyError(err);
-          setDisplay({ type: 'error', title, message });
-        } else {
-          setDisplay({ type: 'error', title: '未知错误', message: '请稍后重试。' });
-        }
-      } finally {
-        setIsGenerating(false);
-      }
+      // Fire all in parallel; each tile updates independently.
+      await Promise.allSettled(
+        tiles.map((tile) => runOneTile(tile.tileId, finalParams))
+      );
+
+      setIsGenerating(false);
     },
-    [settings, addHistory, setActiveId, showToast, requestOpenSettings]
+    [settings, showToast, requestOpenSettings, setActiveId, runOneTile]
   );
 
-  const retry = useCallback(() => {
-    if (lastParamsRef.current) {
-      void generate(lastParamsRef.current);
-    } else {
-      setDisplay({ type: 'empty' });
-    }
-  }, [generate]);
+  /** Re-run a single failed tile using the batch's params. */
+  const retryTile = useCallback(
+    async (tileId: string) => {
+      let params: GenerateParams | null = null;
+      setDisplay((prev) => {
+        if (prev.type !== 'batch') return prev;
+        params = prev.params;
+        return {
+          ...prev,
+          tiles: prev.tiles.map((t) => (t.tileId === tileId ? { tileId, status: 'loading' } : t)),
+        };
+      });
+      if (!params) return;
+      setIsGenerating(true);
+      await runOneTile(tileId, params);
+      setIsGenerating(false);
+    },
+    [runOneTile]
+  );
+
+  /** Remove a tile from the display grid and (if it was an image) from history. */
+  const dismissTile = useCallback(
+    (tileId: string) => {
+      setDisplay((prev) => {
+        if (prev.type !== 'batch') return prev;
+        const removed = prev.tiles.find((t) => t.tileId === tileId);
+        if (removed?.status === 'image') {
+          removeHistory(removed.item.id);
+        }
+        const remaining = prev.tiles.filter((t) => t.tileId !== tileId);
+        if (remaining.length === 0) return { type: 'empty' };
+        return { ...prev, tiles: remaining };
+      });
+    },
+    [removeHistory]
+  );
 
   const viewHistoryItem = useCallback(
     (item: HistoryItem) => {
@@ -84,10 +159,21 @@ export function useImageGenerator({ requestOpenSettings }: UseImageGeneratorOpti
         return;
       }
       setActiveId(item.id);
-      setDisplay({ type: 'image', item });
+      setDisplay({
+        type: 'batch',
+        params: { prompt: item.prompt, size: item.size, style: item.style },
+        tiles: [{ tileId: item.id, status: 'image', item }],
+      });
     },
     [isGenerating, setActiveId, showToast]
   );
 
-  return { display, isGenerating, generate, retry, viewHistoryItem };
+  return {
+    display,
+    isGenerating,
+    generate,
+    retryTile,
+    dismissTile,
+    viewHistoryItem,
+  };
 }

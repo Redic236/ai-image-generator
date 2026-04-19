@@ -32,8 +32,13 @@ export interface HistoryItem {
   createdAt: number;
 }
 
+export type BatchCount = 1 | 2 | 4;
+
+export type BatchTile =
+  | { tileId: string; status: 'loading' }
+  | { tileId: string; status: 'image'; item: HistoryItem }
+  | { tileId: string; status: 'error'; title: string; message: string };
+
 export type DisplayState =
   | { type: 'empty' }
-  | { type: 'loading' }
-  | { type: 'image'; item: HistoryItem }
-  | { type: 'error'; title: string; message: string };
+  | { type: 'batch'; params: GenerateParams; tiles: BatchTile[] };

@@ -20,9 +20,10 @@ function AppShell() {
   const openSettings = useCallback(() => setSettingsOpen(true), []);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
 
-  const { display, isGenerating, generate, retry, viewHistoryItem } = useImageGenerator({
-    requestOpenSettings: openSettings,
-  });
+  const { display, isGenerating, generate, retryTile, dismissTile, viewHistoryItem } =
+    useImageGenerator({
+      requestOpenSettings: openSettings,
+    });
 
   const { isOptimizing, optimize } = usePromptOptimizer({
     onSuccess: setPromptValue,
@@ -50,7 +51,12 @@ function AppShell() {
             isGenerating={isGenerating}
             isOptimizing={isOptimizing}
           />
-          <DisplayCard state={display} onRetry={retry} onGenerate={generate} />
+          <DisplayCard
+            state={display}
+            onGenerate={(params) => generate(params, 1)}
+            onRetryTile={retryTile}
+            onDismissTile={dismissTile}
+          />
           <footer className="pb-2 text-center text-[11px] text-white/40">
             由智谱 AI 驱动 · 本地保存历史记录
           </footer>
