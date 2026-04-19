@@ -4,6 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import { PromptCard } from './components/PromptCard';
 import { DisplayCard } from './components/DisplayCard';
 import { SettingsDialog } from './components/SettingsDialog';
+import { ShortcutsDialog } from './components/ShortcutsDialog';
 import { Toast } from './components/Toast';
 import { SettingsProvider, useSettings } from './context/SettingsContext';
 import { HistoryProvider, useHistory } from './context/HistoryContext';
@@ -16,6 +17,7 @@ import { usePromptOptimizer } from './hooks/usePromptOptimizer';
 function AppShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [promptValue, setPromptValue] = useState('');
   const { settings } = useSettings();
   const { showToast } = useToast();
@@ -25,6 +27,32 @@ function AppShell() {
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
   const openSidebar = useCallback(() => setSidebarOpen(true), []);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+  const openShortcuts = useCallback(() => setShortcutsOpen(true), []);
+  const closeShortcuts = useCallback(() => setShortcutsOpen(false), []);
+
+  // Global keyboard shortcuts. ? opens help, / focuses prompt.
+  // Both only fire when the user is NOT typing inside an input/textarea.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      const inTypeable =
+        !!target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable);
+      if (inTypeable) return;
+
+      if (e.key === '?') {
+        e.preventDefault();
+        setShortcutsOpen(true);
+      } else if (e.key === '/') {
+        e.preventDefault();
+        document.getElementById('prompt')?.focus();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const { display, isGenerating, generate, retryTile, dismissTile, viewHistoryItem } =
     useImageGenerator({
@@ -55,6 +83,7 @@ function AppShell() {
           <Header
             onOpenSettings={openSettings}
             onOpenHistory={openSidebar}
+            onOpenShortcuts={openShortcuts}
             historyCount={historyItems.length}
           />
           <PromptCard
@@ -77,6 +106,7 @@ function AppShell() {
         </main>
       </div>
       <SettingsDialog open={settingsOpen} onClose={closeSettings} />
+      <ShortcutsDialog open={shortcutsOpen} onClose={closeShortcuts} />
       <Toast />
     </div>
   );

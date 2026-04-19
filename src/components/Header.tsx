@@ -3,10 +3,16 @@ import { useTheme } from '../context/ThemeContext';
 interface HeaderProps {
   onOpenSettings: () => void;
   onOpenHistory: () => void;
+  onOpenShortcuts: () => void;
   historyCount: number;
 }
 
-export function Header({ onOpenSettings, onOpenHistory, historyCount }: HeaderProps) {
+export function Header({
+  onOpenSettings,
+  onOpenHistory,
+  onOpenShortcuts,
+  historyCount,
+}: HeaderProps) {
   const { theme, toggle: toggleTheme } = useTheme();
   return (
     <header className="flex items-center justify-between text-white">
@@ -52,6 +58,26 @@ export function Header({ onOpenSettings, onOpenHistory, historyCount }: HeaderPr
         </div>
       </div>
       <div className="flex items-center gap-2">
+        <button
+          onClick={onOpenShortcuts}
+          aria-label="查看快捷键"
+          title="快捷键 (按 ? 也可打开)"
+          className="hidden h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/80 transition hover:bg-white/10 md:flex"
+        >
+          <svg
+            className="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"
+            />
+          </svg>
+        </button>
         <button
           onClick={toggleTheme}
           aria-label={theme === 'dark' ? '切换到浅色' : '切换到深色'}
