@@ -321,9 +321,17 @@ function aspectClassFor(size: ImageSize): string {
     case '1024x1024':
       return 'aspect-square';
     case '1344x768':
-      return 'aspect-[7/4]';
+      return 'aspect-[16/9]';
+    case '1152x864':
+      return 'aspect-[4/3]';
+    case '1440x720':
+      return 'aspect-[2/1]';
     case '768x1344':
-      return 'aspect-[4/7]';
+      return 'aspect-[9/16]';
+    case '864x1152':
+      return 'aspect-[3/4]';
+    case '720x1440':
+      return 'aspect-[1/2]';
   }
 }
 

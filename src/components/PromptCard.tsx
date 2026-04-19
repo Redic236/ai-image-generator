@@ -158,7 +158,7 @@ export function PromptCard({
             <StepBadge n={2} />
             图片尺寸
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
             {SIZE_OPTIONS.map((opt) => (
               <SizeChip
                 key={opt.value}
@@ -301,6 +301,17 @@ function Spinner({ className = '' }: { className?: string }) {
   );
 }
 
+/** Explicit class map so Tailwind JIT can see every utility used. */
+const SIZE_ASPECT_BOX: Record<ImageSize, string> = {
+  '1024x1024': 'h-8 w-8',
+  '1344x768': 'h-5 w-9',
+  '1152x864': 'h-7 w-9',
+  '1440x720': 'h-4 w-9',
+  '768x1344': 'h-9 w-5',
+  '864x1152': 'h-9 w-7',
+  '720x1440': 'h-9 w-4',
+};
+
 interface SizeChipProps {
   value: ImageSize;
   label: string;
@@ -309,18 +320,15 @@ interface SizeChipProps {
 }
 
 function SizeChip({ value, label, selected, onSelect }: SizeChipProps) {
-  const [w, h] = value.split('x');
-  const aspectClass =
-    value === '1024x1024' ? 'h-8 w-8' : value === '1344x768' ? 'h-6 w-10' : 'h-10 w-6';
+  const aspectClass = SIZE_ASPECT_BOX[value];
   return (
-    <label className="chip cursor-pointer">
+    <label className="chip cursor-pointer" title={value.replace('x', ' × ')}>
       <input type="radio" name="size" value={value} checked={selected} onChange={onSelect} />
-      <div className="rounded-xl border border-ink-200 bg-white/70 px-3 py-3 text-center">
-        <div className={`mx-auto rounded-md border-2 border-current ${aspectClass}`} />
-        <div className="mt-2 text-sm font-medium">{label}</div>
-        <div className="chip-sub mt-0.5 text-[11px] text-ink-400">
-          {w} × {h}
+      <div className="flex flex-col items-center justify-end gap-1.5 rounded-xl border border-ink-200 bg-white/70 px-2 py-2.5">
+        <div className="flex h-10 items-center justify-center">
+          <div className={`rounded-md border-2 border-current ${aspectClass}`} />
         </div>
+        <div className="text-xs font-medium">{label}</div>
       </div>
     </label>
   );

@@ -94,9 +94,13 @@ export const STYLE_SUFFIX: Record<ImageStyle, string> = Object.fromEntries(
 ) as Record<ImageStyle, string>;
 
 export const SIZE_OPTIONS: ReadonlyArray<{ value: ImageSize; label: string }> = [
-  { value: '1024x1024', label: '正方形' },
-  { value: '1344x768', label: '横版' },
-  { value: '768x1344', label: '竖版' },
+  { value: '1024x1024', label: '1:1' },
+  { value: '1344x768', label: '16:9' },
+  { value: '1152x864', label: '4:3' },
+  { value: '1440x720', label: '2:1' },
+  { value: '768x1344', label: '9:16' },
+  { value: '864x1152', label: '3:4' },
+  { value: '720x1440', label: '1:2' },
 ];
 
 export const MODEL_OPTIONS: ReadonlyArray<{ value: ImageModel; label: string }> = [

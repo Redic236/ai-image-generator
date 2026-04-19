@@ -1,4 +1,11 @@
-export type ImageSize = '1024x1024' | '1344x768' | '768x1344';
+export type ImageSize =
+  | '1024x1024'
+  | '1344x768'
+  | '1152x864'
+  | '1440x720'
+  | '768x1344'
+  | '864x1152'
+  | '720x1440';
 export type ImageStyle =
   | 'realistic'
   | 'artistic'
