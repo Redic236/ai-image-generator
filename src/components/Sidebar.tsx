@@ -4,6 +4,7 @@ import { useHistory } from '../context/HistoryContext';
 import { formatRelativeTime } from '../lib/format';
 import { proxied } from '../lib/proxied';
 import { CloseIcon } from './icons';
+import { ConfirmDialog } from './ConfirmDialog';
 import type { HistoryItem } from '../types';
 
 interface SidebarProps {
@@ -14,6 +15,7 @@ interface SidebarProps {
 
 export function Sidebar({ onSelectItem, mobileOpen, onMobileClose }: SidebarProps) {
   const { items, activeId, remove, clear } = useHistory();
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
 
   // Tick once a minute so the relative-time labels stay fresh.
   const [, setTick] = useState(0);
@@ -34,9 +36,12 @@ export function Sidebar({ onSelectItem, mobileOpen, onMobileClose }: SidebarProp
 
   const handleClear = () => {
     if (items.length === 0) return;
-    if (confirm('确定要清空所有历史记录吗？此操作无法撤销。')) {
-      clear();
-    }
+    setIsClearConfirmOpen(true);
+  };
+
+  const confirmClear = () => {
+    clear();
+    setIsClearConfirmOpen(false);
   };
 
   // Closing the drawer after selecting an item feels right on mobile.
@@ -121,6 +126,15 @@ export function Sidebar({ onSelectItem, mobileOpen, onMobileClose }: SidebarProp
           </div>
         </div>
       </aside>
+      <ConfirmDialog
+        open={isClearConfirmOpen}
+        title="清空历史记录？"
+        message="这会删除你本地保存的全部生成记录，此操作无法撤销。"
+        confirmLabel="清空"
+        tone="danger"
+        onConfirm={confirmClear}
+        onCancel={() => setIsClearConfirmOpen(false)}
+      />
     </>
   );
 }
