@@ -5,6 +5,7 @@ import { STYLE_LABEL } from '../lib/constants';
 import { useToast } from '../context/ToastContext';
 import { Spinner } from './icons';
 import { BatchGrid, EmptyState } from './DisplayCard.tiles';
+import { asBatchCount } from '../types';
 import type { BatchCount, BatchTile, DisplayState, GenerateParams } from '../types';
 
 interface DisplayCardProps {
@@ -80,8 +81,7 @@ export function DisplayCard({ state, onGenerate, onRetryTile, onDismissTile }: D
 
   const handleRegenerateAll = () => {
     if (state.type !== 'batch') return;
-    const count = state.tiles.length as BatchCount;
-    onGenerate(state.params, count);
+    onGenerate(state.params, asBatchCount(state.tiles.length));
   };
 
   const canRegenerateAll = state.type === 'batch' && state.tiles.length > 1;

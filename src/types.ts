@@ -41,6 +41,14 @@ export interface HistoryItem {
 
 export type BatchCount = 1 | 2 | 4;
 
+/** Narrow any number to a valid BatchCount. Falls back to 1 (safe default)
+ *  for anything out of range — including the pathological case of a tiles
+ *  array that was mutated to length 3 or 5 by some future bug. */
+export function asBatchCount(n: number): BatchCount {
+  if (n === 1 || n === 2 || n === 4) return n;
+  return 1;
+}
+
 export type BatchTile =
   | { tileId: string; status: 'loading' }
   | { tileId: string; status: 'image'; item: HistoryItem }
