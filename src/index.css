@@ -124,3 +124,20 @@ aside .overflow-y-auto::-webkit-scrollbar-thumb {
     scroll-behavior: auto !important;
   }
 }
+
+/* Theme-switch crossfade: without this, toggling dark mode snaps every
+   surface at once which reads as a jarring flash. Targeting the few
+   properties that actually change between themes keeps the transition
+   cheap — no layout thrash, no animating `all`. */
+@media (prefers-reduced-motion: no-preference) {
+  .glass,
+  .glass-dark,
+  body,
+  .mesh-bg,
+  dialog {
+    transition:
+      background-color 200ms ease-out,
+      border-color 200ms ease-out,
+      color 200ms ease-out;
+  }
+}
