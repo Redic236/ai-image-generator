@@ -1,4 +1,5 @@
 import { useTheme } from '../context/ThemeContext';
+import { ModelDropdown } from './ModelDropdown';
 
 interface HeaderProps {
   onOpenSettings: () => void;
@@ -58,6 +59,7 @@ export function Header({
         </div>
       </div>
       <div className="flex items-center gap-2">
+        <ModelDropdown />
         <button
           onClick={onOpenShortcuts}
           aria-label="查看快捷键"
