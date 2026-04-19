@@ -60,6 +60,10 @@ export function PromptCard({
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
+      // Prevent the shortcut from firing while a batch is already in flight
+      // or an optimize call is pending — the onClick handler is disabled via
+      // `busy` but the keydown path bypasses that unless we check here.
+      if (busy) return;
       onGenerate({ prompt: promptValue, size, style }, count);
     }
   };

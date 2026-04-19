@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { generateImage } from '../services/zhipu';
 import { ApiError, friendlyError } from '../lib/errors';
 import { useHistory } from '../context/HistoryContext';
@@ -35,6 +35,10 @@ function makeHistoryItem(params: GenerateParams, url: string): HistoryItem {
 export function useImageGenerator({ requestOpenSettings }: UseImageGeneratorOptions) {
   const [display, setDisplay] = useState<DisplayState>({ type: 'empty' });
   const [isGenerating, setIsGenerating] = useState(false);
+  // A separate ref mirroring the in-flight batch state, used as a guard
+  // that's immune to stale-closure issues. Prevents keyboard shortcut /
+  // button / retryAll from starting a second batch on top of the first.
+  const batchInFlightRef = useRef(false);
 
   const { settings } = useSettings();
   // Destructure to primitives so useCallback deps don't invalidate when an
@@ -86,6 +90,10 @@ export function useImageGenerator({ requestOpenSettings }: UseImageGeneratorOpti
 
   const generate = useCallback(
     async (params: GenerateParams, count: BatchCount = 1) => {
+      // Concurrent-batch guard. A ref keeps this correct even if the
+      // caller fires before React flushes the isGenerating state update.
+      if (batchInFlightRef.current) return;
+
       const prompt = params.prompt.trim();
       if (!prompt) {
         showToast('请先输入图片描述');
@@ -106,14 +114,18 @@ export function useImageGenerator({ requestOpenSettings }: UseImageGeneratorOpti
       // Clear active highlight so the first new success becomes active.
       setActiveId(null);
       setDisplay({ type: 'batch', params: finalParams, tiles });
+      batchInFlightRef.current = true;
       setIsGenerating(true);
 
-      // Fire all in parallel; each tile updates independently.
-      await Promise.allSettled(
-        tiles.map((tile) => runOneTile(tile.tileId, finalParams))
-      );
-
-      setIsGenerating(false);
+      try {
+        // Fire all in parallel; each tile updates independently.
+        await Promise.allSettled(
+          tiles.map((tile) => runOneTile(tile.tileId, finalParams))
+        );
+      } finally {
+        batchInFlightRef.current = false;
+        setIsGenerating(false);
+      }
     },
     [apiKey, showToast, requestOpenSettings, setActiveId, runOneTile]
   );
