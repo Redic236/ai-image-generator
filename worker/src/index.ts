@@ -11,11 +11,16 @@
 
 // Only proxy to hosts ending with one of these suffixes. Prevents the worker
 // from being abused as a generic open proxy.
+//
+// Note on .aliyuncs.com — previously in this list, removed: it's a shared
+// Alibaba Cloud namespace that any tenant can register subdomains under,
+// so allowing the whole suffix effectively turns this Worker into a public
+// proxy for arbitrary aliyun resources. If Zhipu ever returns an aliyun URL
+// we'll need to add the specific bucket, not the umbrella domain.
 const ALLOWED_HOST_SUFFIXES = [
   '.ufileos.com',      // Zhipu image CDN (UCloud)
   '.bigmodel.cn',      // Zhipu API
   '.zhipuai.cn',       // Legacy Zhipu host
-  '.aliyuncs.com',     // Occasional alternative CDN
 ] as const;
 
 const UPSTREAM_TIMEOUT_MS = 30_000;
