@@ -4,6 +4,7 @@ import { formatRelativeTime, formatSize } from '../lib/format';
 import { STYLE_LABEL } from '../lib/constants';
 import { useToast } from '../context/ToastContext';
 import { Lightbox } from './Lightbox';
+import { CloseIcon, Spinner } from './icons';
 import type {
   BatchCount,
   BatchTile,
@@ -311,15 +312,6 @@ function triggerDownload(href: string, filename: string) {
   a.remove();
 }
 
-function Spinner({ className = '' }: { className?: string }) {
-  return (
-    <svg className={`animate-spin ${className}`} viewBox="0 0 24 24" fill="none">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-      <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v3a5 5 0 0 0-5 5H4Z" />
-    </svg>
-  );
-}
-
 function aspectClassFor(size: ImageSize): string {
   switch (size) {
     case '1024x1024':
@@ -462,15 +454,7 @@ function ErrorTile({ title, message, onRetry, onDismiss }: ErrorTileProps) {
         aria-label="移除"
         className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md text-ink-400 opacity-60 transition hover:bg-rose-500/20 hover:text-rose-600 hover:opacity-100"
       >
-        <svg
-          className="h-3.5 w-3.5"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-        </svg>
+        <CloseIcon className="h-3.5 w-3.5" />
       </button>
       <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-orange-500 shadow-md">
         <svg
@@ -552,15 +536,7 @@ function ImageTile({ item, onDismiss }: ImageTileProps) {
           aria-label="移除"
           className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md bg-white/80 text-ink-400 backdrop-blur-sm transition hover:bg-rose-500/20 hover:text-rose-600"
         >
-          <svg
-            className="h-3.5 w-3.5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-          </svg>
+          <CloseIcon className="h-3.5 w-3.5" />
         </button>
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-slate-400 to-slate-500 shadow-lg">
           <svg
@@ -622,15 +598,7 @@ function ImageTile({ item, onDismiss }: ImageTileProps) {
           title="删除这张"
           className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-md bg-black/40 text-white opacity-0 backdrop-blur-sm transition hover:bg-rose-500/80 group-hover:opacity-100 focus:opacity-100"
         >
-          <svg
-            className="h-3.5 w-3.5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-          </svg>
+          <CloseIcon className="h-3.5 w-3.5" />
         </button>
       )}
       {lightboxOpen && (

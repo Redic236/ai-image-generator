@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 import { SIZE_OPTIONS, STYLES } from '../lib/constants';
 import { useFavorites } from '../context/FavoritesContext';
+import { CloseIcon, Spinner } from './icons';
 import type { BatchCount, GenerateParams, ImageSize, ImageStyle } from '../types';
 
 const BATCH_OPTIONS: ReadonlyArray<{ value: BatchCount; label: string }> = [
@@ -296,15 +297,6 @@ function StepBadge({ n }: { n: number }) {
   );
 }
 
-function Spinner({ className = '' }: { className?: string }) {
-  return (
-    <svg className={`animate-spin ${className}`} viewBox="0 0 24 24" fill="none">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-      <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v3a5 5 0 0 0-5 5H4Z" />
-    </svg>
-  );
-}
-
 /** Explicit class map so Tailwind JIT can see every utility used. */
 const SIZE_ASPECT_BOX: Record<ImageSize, string> = {
   '1024x1024': 'h-8 w-8',
@@ -369,9 +361,7 @@ function FavoriteChip({ prompt, onApply, onRemove }: FavoriteChipProps) {
         title="移除收藏"
         className="absolute right-0.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-amber-700/70 opacity-0 transition hover:bg-amber-200 hover:text-amber-900 focus:opacity-100 group-hover:opacity-100"
       >
-        <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-        </svg>
+        <CloseIcon className="h-2.5 w-2.5" />
       </button>
     </div>
   );

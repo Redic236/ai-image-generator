@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { MODEL_OPTIONS } from '../lib/constants';
+import { CloseIcon } from './icons';
 import type { ImageModel } from '../types';
 
 interface SettingsDialogProps {
@@ -51,15 +52,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
             className="rounded-lg p-1 text-ink-400 transition hover:bg-ink-50 hover:text-ink-700 dark:hover:bg-ink-700 dark:hover:text-ink-100"
             aria-label="关闭"
           >
-            <svg
-              className="h-5 w-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-            </svg>
+            <CloseIcon className="h-5 w-5" />
           </button>
         </div>
 

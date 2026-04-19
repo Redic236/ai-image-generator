@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { lockBodyScroll, unlockBodyScroll } from '../lib/bodyScrollLock';
+import { CloseIcon } from './icons';
 
 interface LightboxProps {
   src: string;
@@ -62,15 +63,7 @@ export function Lightbox({ src, alt, onClose }: LightboxProps) {
         aria-label="关闭"
         className="fixed right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition hover:bg-white/20"
       >
-        <svg
-          className="h-5 w-5"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-        </svg>
+        <CloseIcon className="h-5 w-5" />
       </button>
 
       {/* Bottom hint */}

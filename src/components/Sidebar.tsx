@@ -3,6 +3,7 @@ import type { MouseEvent } from 'react';
 import { useHistory } from '../context/HistoryContext';
 import { formatRelativeTime } from '../lib/format';
 import { proxied } from '../lib/proxied';
+import { CloseIcon } from './icons';
 import type { HistoryItem } from '../types';
 
 interface SidebarProps {
@@ -92,15 +93,7 @@ export function Sidebar({ onSelectItem, mobileOpen, onMobileClose }: SidebarProp
               aria-label="关闭"
               className="flex h-7 w-7 items-center justify-center rounded-lg text-white/60 transition hover:bg-white/10 hover:text-white lg:hidden"
             >
-              <svg
-                className="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-              </svg>
+              <CloseIcon className="h-4 w-4" />
             </button>
           </div>
         </div>
