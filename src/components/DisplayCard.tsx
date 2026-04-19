@@ -5,11 +5,18 @@ import { formatRelativeTime, formatSize } from '../lib/format';
 import { STYLE_LABEL } from '../lib/constants';
 import { useToast } from '../context/ToastContext';
 import { Lightbox } from './Lightbox';
-import type { BatchTile, DisplayState, GenerateParams, HistoryItem, ImageSize } from '../types';
+import type {
+  BatchCount,
+  BatchTile,
+  DisplayState,
+  GenerateParams,
+  HistoryItem,
+  ImageSize,
+} from '../types';
 
 interface DisplayCardProps {
   state: DisplayState;
-  onGenerate: (params: GenerateParams) => void;
+  onGenerate: (params: GenerateParams, count?: BatchCount) => void;
   onRetryTile: (tileId: string) => void;
   onDismissTile: (tileId: string) => void;
 }
@@ -75,6 +82,14 @@ export function DisplayCard({ state, onGenerate, onRetryTile, onDismissTile }: D
       style: primaryTile.item.style,
     });
   };
+
+  const handleRegenerateAll = () => {
+    if (state.type !== 'batch') return;
+    const count = state.tiles.length as BatchCount;
+    onGenerate(state.params, count);
+  };
+
+  const canRegenerateAll = state.type === 'batch' && state.tiles.length > 1;
 
   const handleDownloadZip = async () => {
     if (successfulTiles.length === 0) return;
@@ -143,6 +158,27 @@ export function DisplayCard({ state, onGenerate, onRetryTile, onDismissTile }: D
                 重新生成
               </IconButton>
             </>
+          )}
+          {canRegenerateAll && (
+            <IconButton
+              onClick={handleRegenerateAll}
+              title={`用相同参数重新生成 ${state.type === 'batch' ? state.tiles.length : 0} 张`}
+            >
+              <svg
+                className="h-3.5 w-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4.5 12a7.5 7.5 0 0 0 15 0m-15 0a7.5 7.5 0 1 1 15 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077 1.41-.513m14.095-5.13 1.41-.513M5.106 17.785l1.15-.964m11.49-9.642 1.149-.964M7.501 19.795l.75-1.3m7.5-12.99.75-1.3m-6.063 16.658.26-1.477m2.605-14.772.26-1.477m0 17.726-.26-1.477M10.698 4.614l-.26-1.477M16.5 19.794l-.75-1.299M7.5 4.205 12 12m6.894 5.785-1.149-.964M6.256 7.178l-1.15-.964m15.352 8.864-1.41-.513M4.954 9.435l-1.41-.514M12.002 12l-3.75 6.495"
+                />
+              </svg>
+              全部重生成
+            </IconButton>
           )}
           <button
             onClick={handleDownload}

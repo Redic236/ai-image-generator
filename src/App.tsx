@@ -53,7 +53,7 @@ function AppShell() {
           />
           <DisplayCard
             state={display}
-            onGenerate={(params) => generate(params, 1)}
+            onGenerate={(params, count) => generate(params, count ?? 1)}
             onRetryTile={retryTile}
             onDismissTile={dismissTile}
           />
