@@ -36,13 +36,14 @@ export function ModelDropdown() {
   const currentLabel = current ? splitLabel(current.label) : { name: settings.model, desc: '' };
 
   return (
-    <div ref={containerRef} className="relative hidden md:block">
+    <div ref={containerRef} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-label={`当前模型 ${currentLabel.name}，点击切换`}
         title="切换模型"
-        className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 transition hover:bg-white/10"
+        className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white/80 transition hover:bg-white/10 sm:px-3"
       >
         <svg
           className="h-4 w-4"
@@ -57,7 +58,7 @@ export function ModelDropdown() {
             d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 6.75v10.5a2.25 2.25 0 0 0 2.25 2.25Zm.75-12h9v9h-9v-9Z"
           />
         </svg>
-        <span className="font-medium">{currentLabel.name}</span>
+        <span className="hidden font-medium sm:inline">{currentLabel.name}</span>
         <svg
           className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`}
           viewBox="0 0 24 24"

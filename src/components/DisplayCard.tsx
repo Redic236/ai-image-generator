@@ -137,7 +137,7 @@ export function DisplayCard({ state, onGenerate, onRetryTile, onDismissTile }: D
                     d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
                   />
                 </svg>
-                复制提示词
+                <span className="hidden sm:inline">复制提示词</span>
               </IconButton>
               <IconButton onClick={handleRegenerate} title="用相同参数重新生成一张">
                 <svg
@@ -153,7 +153,7 @@ export function DisplayCard({ state, onGenerate, onRetryTile, onDismissTile }: D
                     d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
                   />
                 </svg>
-                重新生成
+                <span className="hidden sm:inline">重新生成</span>
               </IconButton>
             </>
           )}
@@ -175,7 +175,7 @@ export function DisplayCard({ state, onGenerate, onRetryTile, onDismissTile }: D
                   d="M4.5 12a7.5 7.5 0 0 0 15 0m-15 0a7.5 7.5 0 1 1 15 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077 1.41-.513m14.095-5.13 1.41-.513M5.106 17.785l1.15-.964m11.49-9.642 1.149-.964M7.501 19.795l.75-1.3m7.5-12.99.75-1.3m-6.063 16.658.26-1.477m2.605-14.772.26-1.477m0 17.726-.26-1.477M10.698 4.614l-.26-1.477M16.5 19.794l-.75-1.299M7.5 4.205 12 12m6.894 5.785-1.149-.964M6.256 7.178l-1.15-.964m15.352 8.864-1.41-.513M4.954 9.435l-1.41-.514M12.002 12l-3.75 6.495"
                 />
               </svg>
-              全部重生成
+              <span className="hidden sm:inline">全部重生成</span>
             </IconButton>
           )}
           <button
@@ -288,7 +288,8 @@ function IconButton({
     <button
       onClick={onClick}
       title={title}
-      className="hidden items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-medium text-ink-600 transition hover:border-purple-300 hover:text-purple-600 sm:inline-flex"
+      aria-label={title}
+      className="inline-flex items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-2 py-1.5 text-xs font-medium text-ink-600 transition hover:border-purple-300 hover:text-purple-600 sm:px-3"
     >
       {children}
     </button>
