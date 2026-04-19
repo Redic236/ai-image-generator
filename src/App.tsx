@@ -8,6 +8,7 @@ import { Toast } from './components/Toast';
 import { SettingsProvider, useSettings } from './context/SettingsContext';
 import { HistoryProvider, useHistory } from './context/HistoryContext';
 import { ToastProvider, useToast } from './context/ToastContext';
+import { FavoritesProvider } from './context/FavoritesContext';
 import { useImageGenerator } from './hooks/useImageGenerator';
 import { usePromptOptimizer } from './hooks/usePromptOptimizer';
 
@@ -84,9 +85,11 @@ export default function App() {
   return (
     <SettingsProvider>
       <HistoryProvider>
-        <ToastProvider>
-          <AppShell />
-        </ToastProvider>
+        <FavoritesProvider>
+          <ToastProvider>
+            <AppShell />
+          </ToastProvider>
+        </FavoritesProvider>
       </HistoryProvider>
     </SettingsProvider>
   );

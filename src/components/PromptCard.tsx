@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import type { KeyboardEvent } from 'react';
+import type { KeyboardEvent, MouseEvent } from 'react';
 import { SIZE_OPTIONS, STYLES } from '../lib/constants';
+import { useFavorites } from '../context/FavoritesContext';
 import type { BatchCount, GenerateParams, ImageSize, ImageStyle } from '../types';
 
 const BATCH_OPTIONS: ReadonlyArray<{ value: BatchCount; label: string }> = [
@@ -43,6 +44,17 @@ export function PromptCard({
   const [style, setStyle] = useState<ImageStyle>('realistic');
   const [count, setCount] = useState<BatchCount>(1);
 
+  const { favorites, add: addFavorite, remove: removeFavorite, has: isFavorited } =
+    useFavorites();
+  const canFavorite = promptValue.trim().length > 0;
+  const favorited = canFavorite && isFavorited(promptValue);
+
+  const handleToggleFavorite = () => {
+    if (!canFavorite) return;
+    if (favorited) removeFavorite(promptValue);
+    else addFavorite(promptValue);
+  };
+
   const busy = isGenerating || isOptimizing;
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -76,8 +88,34 @@ export function PromptCard({
             value={promptValue}
             onChange={(e) => onPromptChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="w-full resize-none rounded-2xl border border-ink-200 bg-white/70 px-4 py-3.5 text-[15px] text-ink-800 placeholder-ink-400 shadow-inner outline-none transition focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
+            className="w-full resize-none rounded-2xl border border-ink-200 bg-white/70 px-4 py-3.5 pr-11 text-[15px] text-ink-800 placeholder-ink-400 shadow-inner outline-none transition focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
           />
+          <button
+            type="button"
+            onClick={handleToggleFavorite}
+            disabled={!canFavorite}
+            aria-label={favorited ? '取消收藏此提示词' : '收藏此提示词'}
+            title={favorited ? '取消收藏' : '收藏此提示词'}
+            className={`absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-md transition disabled:cursor-not-allowed disabled:opacity-40 ${
+              favorited
+                ? 'text-amber-500 hover:bg-amber-50 hover:text-amber-600'
+                : 'text-ink-300 hover:bg-ink-50 hover:text-amber-500'
+            }`}
+          >
+            <svg
+              className="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill={favorited ? 'currentColor' : 'none'}
+              stroke="currentColor"
+              strokeWidth="1.6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"
+              />
+            </svg>
+          </button>
           <div className="pointer-events-none absolute bottom-3 right-3 text-[11px] text-ink-300">
             Ctrl + Enter 生成
           </div>
@@ -95,6 +133,21 @@ export function PromptCard({
                 {example}
               </button>
             ))}
+          </div>
+        )}
+        {favorites.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-start gap-1.5">
+            <span className="flex-shrink-0 pt-1 text-[11px] text-ink-400">我的收藏：</span>
+            <div className="flex flex-wrap gap-1.5">
+              {favorites.map((fav) => (
+                <FavoriteChip
+                  key={fav}
+                  prompt={fav}
+                  onApply={() => onPromptChange(fav)}
+                  onRemove={() => removeFavorite(fav)}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -270,6 +323,45 @@ function SizeChip({ value, label, selected, onSelect }: SizeChipProps) {
         </div>
       </div>
     </label>
+  );
+}
+
+interface FavoriteChipProps {
+  prompt: string;
+  onApply: () => void;
+  onRemove: () => void;
+}
+
+function FavoriteChip({ prompt, onApply, onRemove }: FavoriteChipProps) {
+  const handleRemoveClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    onRemove();
+  };
+  return (
+    <div className="group relative flex items-center">
+      <button
+        type="button"
+        onClick={onApply}
+        title={prompt}
+        className="flex max-w-[220px] items-center gap-1 rounded-full border border-amber-200 bg-amber-50/70 py-1 pl-2.5 pr-6 text-[11px] text-amber-800 transition hover:border-amber-300 hover:bg-amber-100"
+      >
+        <svg className="h-3 w-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+        </svg>
+        <span className="truncate">{prompt}</span>
+      </button>
+      <button
+        type="button"
+        onClick={handleRemoveClick}
+        aria-label="移除收藏"
+        title="移除收藏"
+        className="absolute right-0.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-amber-700/70 opacity-0 transition hover:bg-amber-200 hover:text-amber-900 focus:opacity-100 group-hover:opacity-100"
+      >
+        <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
   );
 }
 
