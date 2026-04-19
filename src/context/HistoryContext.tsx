@@ -23,12 +23,29 @@ interface HistoryContextValue {
 
 const HistoryContext = createContext<HistoryContextValue | null>(null);
 
+/** Runtime shape check — defends against corrupted localStorage (manual
+ *  edits, older schema versions, or a rogue extension). Items that fail
+ *  are silently dropped so the app never crashes on a bad entry. */
+function isValidHistoryItem(x: unknown): x is HistoryItem {
+  if (typeof x !== 'object' || x === null) return false;
+  const it = x as Record<string, unknown>;
+  return (
+    typeof it.id === 'string' &&
+    typeof it.prompt === 'string' &&
+    typeof it.size === 'string' &&
+    typeof it.style === 'string' &&
+    typeof it.imageUrl === 'string' &&
+    typeof it.createdAt === 'number'
+  );
+}
+
 function loadHistory(): HistoryItem[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? (arr as HistoryItem[]) : [];
+    if (!Array.isArray(arr)) return [];
+    return arr.filter(isValidHistoryItem);
   } catch {
     return [];
   }
