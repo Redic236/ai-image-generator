@@ -3,6 +3,7 @@ import { proxied } from '../lib/proxied';
 import { formatRelativeTime, formatSize } from '../lib/format';
 import { STYLE_LABEL } from '../lib/constants';
 import { useToast } from '../context/ToastContext';
+import { Lightbox } from './Lightbox';
 import type { DisplayState, GenerateParams, HistoryItem } from '../types';
 
 interface DisplayCardProps {
@@ -203,10 +204,12 @@ function Spinner({ className = '' }: { className?: string }) {
 function ImageSlot({ item }: { item: HistoryItem }) {
   const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
   const [reloadKey, setReloadKey] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   // Reset to loading state whenever the item changes.
   useEffect(() => {
     setStatus('loading');
+    setLightboxOpen(false);
   }, [item.id]);
 
   if (status === 'error') {
@@ -269,10 +272,18 @@ function ImageSlot({ item }: { item: HistoryItem }) {
         decoding="async"
         onLoad={() => setStatus('ok')}
         onError={() => setStatus('error')}
+        onClick={() => status === 'ok' && setLightboxOpen(true)}
         className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
-          status === 'ok' ? 'opacity-100' : 'opacity-0'
+          status === 'ok' ? 'cursor-zoom-in opacity-100' : 'opacity-0'
         }`}
       />
+      {lightboxOpen && (
+        <Lightbox
+          src={proxied(item.imageUrl)}
+          alt={item.prompt.slice(0, 60)}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
     </>
   );
 }

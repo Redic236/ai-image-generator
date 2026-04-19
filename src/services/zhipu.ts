@@ -1,5 +1,5 @@
 import { ApiError } from '../lib/errors';
-import { STYLE_LABEL } from '../lib/constants';
+import { STYLE_LABEL, STYLE_SUFFIX } from '../lib/constants';
 import type { GenerateParams, ImageModel, ImageStyle } from '../types';
 
 const IMAGE_API_URL = 'https://open.bigmodel.cn/api/paas/v4/images/generations';
@@ -8,11 +8,6 @@ const CHAT_MODEL = 'glm-4-flash';
 
 const GENERATE_TIMEOUT_MS = 90_000;
 const OPTIMIZE_TIMEOUT_MS = 30_000;
-
-const STYLE_SUFFIX: Record<ImageStyle, string> = {
-  realistic: '，写实风格，照片级真实感，光线自然，细节丰富，高分辨率',
-  artistic: '，艺术风格，绘画质感，富有表现力的色彩与笔触，插画感',
-};
 
 const OPTIMIZE_SYSTEM_PROMPT = `你是专业的 AI 文生图提示词工程师。用户会给你一段简短的画面描述，请你把它扩写成一条高质量的中文文生图提示词。
 

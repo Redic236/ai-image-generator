@@ -1,5 +1,15 @@
 export type ImageSize = '1024x1024' | '1344x768' | '768x1344';
-export type ImageStyle = 'realistic' | 'artistic';
+export type ImageStyle =
+  | 'realistic'
+  | 'artistic'
+  | 'anime'
+  | 'oil'
+  | 'watercolor'
+  | 'cyberpunk'
+  | 'chinese'
+  | 'pixel'
+  | '3d'
+  | 'minimalist';
 export type ImageModel = 'cogview-3-flash' | 'cogview-3-plus' | 'cogview-4';
 
 export interface Settings {
