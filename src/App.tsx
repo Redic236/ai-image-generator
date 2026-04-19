@@ -6,19 +6,23 @@ import { DisplayCard } from './components/DisplayCard';
 import { SettingsDialog } from './components/SettingsDialog';
 import { Toast } from './components/Toast';
 import { SettingsProvider, useSettings } from './context/SettingsContext';
-import { HistoryProvider } from './context/HistoryContext';
+import { HistoryProvider, useHistory } from './context/HistoryContext';
 import { ToastProvider, useToast } from './context/ToastContext';
 import { useImageGenerator } from './hooks/useImageGenerator';
 import { usePromptOptimizer } from './hooks/usePromptOptimizer';
 
 function AppShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [promptValue, setPromptValue] = useState('');
   const { settings } = useSettings();
   const { showToast } = useToast();
+  const { items: historyItems } = useHistory();
 
   const openSettings = useCallback(() => setSettingsOpen(true), []);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  const openSidebar = useCallback(() => setSidebarOpen(true), []);
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   const { display, isGenerating, generate, retryTile, dismissTile, viewHistoryItem } =
     useImageGenerator({
@@ -40,9 +44,17 @@ function AppShell() {
   return (
     <div className="mesh-bg min-h-screen">
       <div className="mx-auto flex min-h-screen max-w-[1400px] gap-6 p-4 md:p-6 lg:p-8">
-        <Sidebar onSelectItem={viewHistoryItem} />
+        <Sidebar
+          onSelectItem={viewHistoryItem}
+          mobileOpen={sidebarOpen}
+          onMobileClose={closeSidebar}
+        />
         <main className="flex min-w-0 flex-1 flex-col gap-6">
-          <Header onOpenSettings={openSettings} />
+          <Header
+            onOpenSettings={openSettings}
+            onOpenHistory={openSidebar}
+            historyCount={historyItems.length}
+          />
           <PromptCard
             promptValue={promptValue}
             onPromptChange={setPromptValue}

@@ -1,11 +1,33 @@
 interface HeaderProps {
   onOpenSettings: () => void;
+  onOpenHistory: () => void;
+  historyCount: number;
 }
 
-export function Header({ onOpenSettings }: HeaderProps) {
+export function Header({ onOpenSettings, onOpenHistory, historyCount }: HeaderProps) {
   return (
     <header className="flex items-center justify-between text-white">
       <div className="flex items-center gap-3">
+        <button
+          onClick={onOpenHistory}
+          aria-label="打开历史记录"
+          className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/80 transition hover:bg-white/10 lg:hidden"
+        >
+          <svg
+            className="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+          {historyCount > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 px-1 text-[9px] font-bold leading-none text-white">
+              {historyCount > 99 ? '99+' : historyCount}
+            </span>
+          )}
+        </button>
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 shadow-glow">
           <svg
             className="h-5 w-5 text-white"
@@ -23,10 +45,10 @@ export function Header({ onOpenSettings }: HeaderProps) {
         </div>
         <div>
           <h1 className="text-xl font-semibold tracking-tight md:text-2xl">AI 图片生成器</h1>
-          <p className="text-xs text-white/50">把文字变成画面</p>
+          <p className="hidden text-xs text-white/50 sm:block">把文字变成画面</p>
         </div>
       </div>
-      <div className="hidden items-center gap-2 md:flex">
+      <div className="flex items-center gap-2">
         <button
           onClick={onOpenSettings}
           className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 transition hover:bg-white/10"
@@ -49,7 +71,7 @@ export function Header({ onOpenSettings }: HeaderProps) {
               d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
             />
           </svg>
-          设置
+          <span className="hidden sm:inline">设置</span>
         </button>
       </div>
     </header>

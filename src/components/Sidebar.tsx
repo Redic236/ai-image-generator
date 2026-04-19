@@ -7,9 +7,11 @@ import type { HistoryItem } from '../types';
 
 interface SidebarProps {
   onSelectItem: (item: HistoryItem) => void;
+  mobileOpen: boolean;
+  onMobileClose: () => void;
 }
 
-export function Sidebar({ onSelectItem }: SidebarProps) {
+export function Sidebar({ onSelectItem, mobileOpen, onMobileClose }: SidebarProps) {
   const { items, activeId, remove, clear } = useHistory();
 
   // Tick once a minute so the relative-time labels stay fresh.
@@ -19,6 +21,16 @@ export function Sidebar({ onSelectItem }: SidebarProps) {
     return () => clearInterval(id);
   }, []);
 
+  // Escape to close on mobile
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onMobileClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mobileOpen, onMobileClose]);
+
   const handleClear = () => {
     if (items.length === 0) return;
     if (confirm('确定要清空所有历史记录吗？此操作无法撤销。')) {
@@ -26,9 +38,29 @@ export function Sidebar({ onSelectItem }: SidebarProps) {
     }
   };
 
+  // Closing the drawer after selecting an item feels right on mobile.
+  const handleSelect = (item: HistoryItem) => {
+    onSelectItem(item);
+    onMobileClose();
+  };
+
   return (
-    <aside className="hidden w-72 shrink-0 lg:block">
-      <div className="glass-dark sticky top-6 flex h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-2xl text-white">
+    <>
+      {/* Mobile backdrop */}
+      {mobileOpen && (
+        <div
+          onClick={onMobileClose}
+          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-[min(20rem,85vw)] shrink-0 transform p-3 transition-transform duration-300 ease-out lg:static lg:z-auto lg:w-72 lg:translate-x-0 lg:p-0 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
+      >
+        <div className="glass-dark flex h-full flex-col overflow-hidden rounded-2xl text-white lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
         <div className="flex items-center justify-between px-5 pt-5">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10">
@@ -48,12 +80,29 @@ export function Sidebar({ onSelectItem }: SidebarProps) {
             </div>
             <h2 className="text-sm font-semibold tracking-wide">历史记录</h2>
           </div>
-          <button
-            onClick={handleClear}
-            className="rounded-lg px-2 py-1 text-xs text-white/60 transition hover:bg-white/10 hover:text-white"
-          >
-            清空
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleClear}
+              className="rounded-lg px-2 py-1 text-xs text-white/60 transition hover:bg-white/10 hover:text-white"
+            >
+              清空
+            </button>
+            <button
+              onClick={onMobileClose}
+              aria-label="关闭"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-white/60 transition hover:bg-white/10 hover:text-white lg:hidden"
+            >
+              <svg
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div className="mt-4 flex-1 overflow-y-auto px-2 pb-4">
@@ -66,7 +115,7 @@ export function Sidebar({ onSelectItem }: SidebarProps) {
                   key={item.id}
                   item={item}
                   active={activeId === item.id}
-                  onClick={() => onSelectItem(item)}
+                  onClick={() => handleSelect(item)}
                   onDelete={() => remove(item.id)}
                 />
               ))}
@@ -74,11 +123,12 @@ export function Sidebar({ onSelectItem }: SidebarProps) {
           )}
         </div>
 
-        <div className="border-t border-white/5 px-5 py-4 text-[11px] text-white/40">
-          历史记录保存在本地浏览器
+          <div className="border-t border-white/5 px-5 py-4 text-[11px] text-white/40">
+            历史记录保存在本地浏览器
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 
