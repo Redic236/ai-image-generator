@@ -1,0 +1,1142 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI 图片生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'Noto Sans SC', 'system-ui', 'sans-serif'],
+            },
+            colors: {
+              ink: {
+                50: '#f6f7fb',
+                100: '#eceef5',
+                200: '#d6dae8',
+                300: '#b2b9d0',
+                400: '#7f89a8',
+                500: '#515a7a',
+                600: '#3a4260',
+                700: '#2a3049',
+                800: '#1b1f33',
+                900: '#0f1122',
+              },
+            },
+            boxShadow: {
+              glow: '0 20px 60px -20px rgba(124, 58, 237, 0.45)',
+              card: '0 10px 40px -12px rgba(15, 17, 34, 0.12)',
+            },
+            keyframes: {
+              float: {
+                '0%, 100%': { transform: 'translateY(0px)' },
+                '50%': { transform: 'translateY(-8px)' },
+              },
+              shimmer: {
+                '0%': { backgroundPosition: '-1000px 0' },
+                '100%': { backgroundPosition: '1000px 0' },
+              },
+            },
+            animation: {
+              float: 'float 6s ease-in-out infinite',
+              shimmer: 'shimmer 2s linear infinite',
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+      }
+      .mesh-bg {
+        background-color: #0f1122;
+        background-image:
+          radial-gradient(at 8% 12%, rgba(124, 58, 237, 0.35) 0px, transparent 55%),
+          radial-gradient(at 92% 10%, rgba(236, 72, 153, 0.25) 0px, transparent 55%),
+          radial-gradient(at 72% 88%, rgba(59, 130, 246, 0.3) 0px, transparent 55%),
+          radial-gradient(at 18% 82%, rgba(16, 185, 129, 0.2) 0px, transparent 55%);
+      }
+      .glass {
+        background: rgba(255, 255, 255, 0.72);
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+      }
+      .glass-dark {
+        background: rgba(22, 25, 48, 0.55);
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .shimmer {
+        background: linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.04) 0%,
+          rgba(255, 255, 255, 0.12) 50%,
+          rgba(255, 255, 255, 0.04) 100%
+        );
+        background-size: 1000px 100%;
+      }
+      /* Radio-as-chip styling */
+      .chip input { position: absolute; opacity: 0; pointer-events: none; }
+      .chip > div {
+        transition: all 160ms ease;
+      }
+      .chip input:checked + div {
+        border-color: transparent;
+        background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+        color: white;
+        box-shadow: 0 8px 24px -8px rgba(124, 58, 237, 0.55);
+      }
+      .chip input:checked + div .chip-sub { color: rgba(255,255,255,0.85); }
+      .chip input:focus-visible + div {
+        outline: 2px solid #7c3aed;
+        outline-offset: 2px;
+      }
+      textarea::-webkit-scrollbar { width: 8px; }
+      textarea::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+      .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      /* Dark sidebar scrollbar */
+      aside .overflow-y-auto::-webkit-scrollbar { width: 6px; }
+      aside .overflow-y-auto::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body class="mesh-bg min-h-screen text-ink-800">
+    <div class="mx-auto flex min-h-screen max-w-[1400px] gap-6 p-4 md:p-6 lg:p-8">
+      <!-- Sidebar: History -->
+      <aside class="hidden w-72 shrink-0 lg:block">
+        <div class="glass-dark sticky top-6 flex h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-2xl text-white">
+          <div class="flex items-center justify-between px-5 pt-5">
+            <div class="flex items-center gap-2">
+              <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18Z"/>
+                </svg>
+              </div>
+              <h2 class="text-sm font-semibold tracking-wide">历史记录</h2>
+            </div>
+            <button
+              id="clearHistoryBtn"
+              class="rounded-lg px-2 py-1 text-xs text-white/60 transition hover:bg-white/10 hover:text-white"
+            >清空</button>
+          </div>
+
+          <div class="mt-4 flex-1 overflow-y-auto px-2 pb-4">
+            <!-- Empty state -->
+            <div id="historyEmpty" class="mt-16 flex flex-col items-center px-4 text-center">
+              <div class="flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
+                <svg class="h-6 w-6 text-white/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m4 15 4-4a3 3 0 0 1 4 0l5 5M14 14l1-1a3 3 0 0 1 4 0l1 1M4 6h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z"/>
+                </svg>
+              </div>
+              <p class="mt-3 text-sm font-medium text-white/70">还没有生成记录</p>
+              <p class="mt-1 text-xs text-white/40">你的创作会出现在这里</p>
+            </div>
+
+            <!-- History list (rendered from localStorage) -->
+            <div id="historyList" class="hidden space-y-1"></div>
+
+            <!-- Item template -->
+            <template id="historyItemTpl">
+              <div class="group relative">
+                <button
+                  data-action="view"
+                  class="flex w-full items-start gap-3 rounded-xl p-2 text-left transition hover:bg-white/5 focus:bg-white/10 focus:outline-none data-[active=true]:bg-white/10"
+                >
+                  <img
+                    data-thumb
+                    loading="lazy"
+                    class="h-12 w-12 flex-shrink-0 rounded-lg bg-white/5 object-cover"
+                    alt=""
+                  />
+                  <div class="min-w-0 flex-1 pr-5">
+                    <p data-prompt class="line-clamp-2 text-[13px] leading-snug text-white/90"></p>
+                    <p data-time class="mt-1 text-[11px] text-white/40"></p>
+                  </div>
+                </button>
+                <button
+                  data-action="delete"
+                  aria-label="删除"
+                  class="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md text-white/40 opacity-0 transition hover:bg-rose-500/20 hover:text-rose-300 group-hover:opacity-100 focus:opacity-100 focus:outline-none"
+                >
+                  <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                  </svg>
+                </button>
+              </div>
+            </template>
+          </div>
+
+          <div class="border-t border-white/5 px-5 py-4 text-[11px] text-white/40">
+            历史记录保存在本地浏览器
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <main class="flex min-w-0 flex-1 flex-col gap-6">
+        <!-- Header -->
+        <header class="flex items-center justify-between text-white">
+          <div class="flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 shadow-glow">
+              <svg class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.847.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/>
+              </svg>
+            </div>
+            <div>
+              <h1 class="text-xl font-semibold tracking-tight md:text-2xl">AI 图片生成器</h1>
+              <p class="text-xs text-white/50">把文字变成画面</p>
+            </div>
+          </div>
+          <div class="hidden items-center gap-2 md:flex">
+            <button
+              id="settingsBtn"
+              class="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 transition hover:bg-white/10"
+            >
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+              </svg>
+              设置
+            </button>
+          </div>
+        </header>
+
+        <!-- Control Card -->
+        <section class="glass rounded-3xl p-6 shadow-card md:p-8">
+          <!-- Prompt -->
+          <div>
+            <div class="mb-3 flex items-center justify-between">
+              <label for="prompt" class="flex items-center gap-2 text-sm font-semibold text-ink-800">
+                <span class="inline-flex h-5 w-5 items-center justify-center rounded-md bg-gradient-to-br from-purple-500 to-pink-500 text-[11px] font-bold text-white">1</span>
+                描述你想要的画面
+              </label>
+              <span id="charCount" class="text-xs text-ink-400">0 / 1000</span>
+            </div>
+            <div class="relative">
+              <textarea
+                id="prompt"
+                rows="4"
+                maxlength="1000"
+                placeholder="例如：夕阳下的京都老街，樱花飘落，电影感打光，4K 超精细..."
+                class="w-full resize-none rounded-2xl border border-ink-200 bg-white/70 px-4 py-3.5 text-[15px] text-ink-800 placeholder-ink-400 shadow-inner outline-none transition focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
+              ></textarea>
+              <div class="pointer-events-none absolute bottom-3 right-3 text-[11px] text-ink-300">
+                Shift + Enter 换行
+              </div>
+            </div>
+          </div>
+
+          <!-- Parameters -->
+          <div class="mt-6 grid gap-6 md:grid-cols-2">
+            <!-- Size -->
+            <div>
+              <label class="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-800">
+                <span class="inline-flex h-5 w-5 items-center justify-center rounded-md bg-gradient-to-br from-purple-500 to-pink-500 text-[11px] font-bold text-white">2</span>
+                图片尺寸
+              </label>
+              <div class="grid grid-cols-3 gap-2">
+                <label class="chip cursor-pointer">
+                  <input type="radio" name="size" value="1024x1024" checked />
+                  <div class="rounded-xl border border-ink-200 bg-white/70 px-3 py-3 text-center">
+                    <div class="mx-auto h-8 w-8 rounded-md border-2 border-current"></div>
+                    <div class="mt-2 text-sm font-medium">正方形</div>
+                    <div class="chip-sub mt-0.5 text-[11px] text-ink-400">1024 × 1024</div>
+                  </div>
+                </label>
+                <label class="chip cursor-pointer">
+                  <input type="radio" name="size" value="1344x768" />
+                  <div class="rounded-xl border border-ink-200 bg-white/70 px-3 py-3 text-center">
+                    <div class="mx-auto h-6 w-10 rounded-md border-2 border-current"></div>
+                    <div class="mt-2 text-sm font-medium">横版</div>
+                    <div class="chip-sub mt-0.5 text-[11px] text-ink-400">1344 × 768</div>
+                  </div>
+                </label>
+                <label class="chip cursor-pointer">
+                  <input type="radio" name="size" value="768x1344" />
+                  <div class="rounded-xl border border-ink-200 bg-white/70 px-3 py-3 text-center">
+                    <div class="mx-auto h-10 w-6 rounded-md border-2 border-current"></div>
+                    <div class="mt-2 text-sm font-medium">竖版</div>
+                    <div class="chip-sub mt-0.5 text-[11px] text-ink-400">768 × 1344</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Style -->
+            <div>
+              <label class="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-800">
+                <span class="inline-flex h-5 w-5 items-center justify-center rounded-md bg-gradient-to-br from-purple-500 to-pink-500 text-[11px] font-bold text-white">3</span>
+                图片风格
+              </label>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="chip cursor-pointer">
+                  <input type="radio" name="style" value="realistic" checked />
+                  <div class="flex items-center gap-3 rounded-xl border border-ink-200 bg-white/70 px-4 py-3">
+                    <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 text-white">
+                      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75 7.5 10.5l4.5 4.5m-4.5-4.5 4.5 4.5m0 0L16.5 10.5m-4.5 4.5 4.5 4.5M3 3h18a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/>
+                      </svg>
+                    </div>
+                    <div class="text-left">
+                      <div class="text-sm font-medium">写实风格</div>
+                      <div class="chip-sub text-[11px] text-ink-400">照片级真实感</div>
+                    </div>
+                  </div>
+                </label>
+                <label class="chip cursor-pointer">
+                  <input type="radio" name="style" value="artistic" />
+                  <div class="flex items-center gap-3 rounded-xl border border-ink-200 bg-white/70 px-4 py-3">
+                    <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-rose-400 text-white">
+                      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.998 15.998 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42"/>
+                      </svg>
+                    </div>
+                    <div class="text-left">
+                      <div class="text-sm font-medium">艺术风格</div>
+                      <div class="chip-sub text-[11px] text-ink-400">绘画 / 插画感</div>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="mt-7 flex flex-col gap-3 sm:flex-row">
+            <button
+              id="optimizeBtn"
+              class="group inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-5 py-3.5 text-sm font-semibold text-ink-700 shadow-sm transition hover:-translate-y-[1px] hover:border-purple-300 hover:text-purple-600 hover:shadow-md"
+            >
+              <svg class="h-4 w-4 transition group-hover:rotate-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.847.813a4.5 4.5 0 0 0-3.09 3.09Z"/>
+              </svg>
+              优化提示词
+            </button>
+            <button
+              id="generateBtn"
+              class="group relative inline-flex flex-[1.5] items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500 px-5 py-3.5 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-[1px] hover:shadow-[0_24px_60px_-16px_rgba(236,72,153,0.55)] disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <span class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span>
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4.24-4.24a4 4 0 0 1 5.66 0L19 12m-7 8v-8"/>
+              </svg>
+              生成图片
+            </button>
+          </div>
+        </section>
+
+        <!-- Display Area -->
+        <section class="glass rounded-3xl p-6 shadow-card md:p-8">
+          <div class="mb-4 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-ink-800">生成结果</h2>
+            <div class="flex items-center gap-2">
+              <button
+                id="downloadBtn"
+                disabled
+                class="inline-flex items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-medium text-ink-600 transition hover:border-purple-300 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/>
+                </svg>
+                下载
+              </button>
+            </div>
+          </div>
+
+          <div class="relative aspect-square w-full overflow-hidden rounded-2xl border border-ink-200 bg-ink-50 md:aspect-[4/3]">
+            <!-- Empty state -->
+            <div id="displayEmpty" class="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
+              <div class="relative">
+                <div class="absolute inset-0 animate-pulse rounded-2xl bg-gradient-to-br from-purple-400/20 to-pink-400/20 blur-2xl"></div>
+                <div class="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 shadow-glow animate-float">
+                  <svg class="h-10 w-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
+                  </svg>
+                </div>
+              </div>
+              <p class="mt-6 text-sm font-medium text-ink-700">开始创作吧</p>
+              <p class="mt-1 max-w-xs text-xs text-ink-400">
+                在上方输入图片描述，选择尺寸和风格，点击生成按钮即可获得 AI 创作的图片
+              </p>
+            </div>
+
+            <!-- Loading state -->
+            <div id="displayLoading" class="absolute inset-0 hidden flex-col items-center justify-center bg-ink-50 p-8">
+              <div class="shimmer absolute inset-0 animate-shimmer"></div>
+              <div class="relative flex flex-col items-center">
+                <div class="relative flex h-16 w-16 items-center justify-center">
+                  <div class="absolute inset-0 animate-ping rounded-full bg-purple-500/30"></div>
+                  <div class="absolute inset-2 animate-ping rounded-full bg-pink-500/30 [animation-delay:0.4s]"></div>
+                  <div class="relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 shadow-glow">
+                    <svg class="h-5 w-5 animate-spin text-white" viewBox="0 0 24 24" fill="none">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>
+                      <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v3a5 5 0 0 0-5 5H4Z"/>
+                    </svg>
+                  </div>
+                </div>
+                <p class="mt-5 text-sm font-semibold text-ink-800">AI 正在作画中...</p>
+                <p class="mt-1 text-xs text-ink-400">通常需要 10-30 秒，请稍候</p>
+              </div>
+            </div>
+
+            <!-- Image state -->
+            <img id="displayImage" class="absolute inset-0 hidden h-full w-full object-cover" alt="生成结果" />
+
+            <!-- Error state -->
+            <div id="displayError" class="absolute inset-0 hidden flex-col items-center justify-center p-8 text-center">
+              <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-orange-500 shadow-[0_16px_40px_-12px_rgba(244,63,94,0.5)]">
+                <svg class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.75h-.152c-3.196 0-6.1-1.248-8.25-3.286ZM12 15.75h.008v.008H12v-.008Z"/>
+                </svg>
+              </div>
+              <p id="errorTitle" class="mt-5 text-sm font-semibold text-ink-800">生成失败</p>
+              <p id="errorMessage" class="mt-1 max-w-sm text-xs leading-relaxed text-ink-500">未知错误</p>
+              <button
+                id="retryBtn"
+                class="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-ink-800 px-4 py-2 text-xs font-medium text-white transition hover:bg-ink-700"
+              >
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                </svg>
+                重试
+              </button>
+            </div>
+          </div>
+
+          <div id="displayMeta" class="mt-4 hidden items-center justify-between text-xs text-ink-500">
+            <div class="flex flex-wrap items-center gap-2">
+              <span id="metaSize" class="rounded-full bg-ink-100 px-2.5 py-1">1024 × 1024</span>
+              <span id="metaStyle" class="rounded-full bg-ink-100 px-2.5 py-1">写实风格</span>
+              <span id="metaTime" class="text-ink-400">刚刚</span>
+            </div>
+          </div>
+        </section>
+
+        <footer class="pb-2 text-center text-[11px] text-white/40">
+          由智谱 AI 驱动 · 本地保存历史记录
+        </footer>
+      </main>
+    </div>
+
+    <!-- Settings Dialog -->
+    <dialog
+      id="settingsDialog"
+      class="w-[min(92vw,440px)] rounded-2xl border border-ink-200 bg-white p-0 shadow-2xl backdrop:bg-ink-900/60 backdrop:backdrop-blur-sm"
+    >
+      <form method="dialog" id="settingsForm" class="flex flex-col">
+        <div class="flex items-center justify-between border-b border-ink-100 px-6 py-4">
+          <h3 class="text-base font-semibold text-ink-800">设置</h3>
+          <button
+            type="button"
+            id="settingsCloseBtn"
+            class="rounded-lg p-1 text-ink-400 transition hover:bg-ink-50 hover:text-ink-700"
+            aria-label="关闭"
+          >
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="space-y-5 px-6 py-5">
+          <div>
+            <label for="apiKeyInput" class="mb-1.5 block text-sm font-medium text-ink-700">
+              智谱 AI API Key
+            </label>
+            <input
+              id="apiKeyInput"
+              type="password"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="xxxxxxxx.xxxxxxxxxxxxxxxx"
+              class="w-full rounded-lg border border-ink-200 bg-white px-3 py-2.5 text-sm text-ink-800 placeholder-ink-300 outline-none transition focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
+            />
+            <p class="mt-1.5 text-[11px] leading-relaxed text-ink-400">
+              前往
+              <a href="https://bigmodel.cn/usercenter/proj-mgmt/apikeys" target="_blank" rel="noopener" class="text-purple-600 hover:underline">智谱 AI 开放平台</a>
+              创建 API Key。Key 仅保存在你的浏览器本地，不会上传。
+            </p>
+          </div>
+          <div>
+            <label for="modelSelect" class="mb-1.5 block text-sm font-medium text-ink-700">模型</label>
+            <select
+              id="modelSelect"
+              class="w-full rounded-lg border border-ink-200 bg-white px-3 py-2.5 text-sm text-ink-800 outline-none transition focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
+            >
+              <option value="cogview-3-flash">CogView-3-Flash · 免费</option>
+              <option value="cogview-3-plus">CogView-3-Plus · 质量更高</option>
+              <option value="cogview-4">CogView-4 · 旗舰</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2 border-t border-ink-100 bg-ink-50/50 px-6 py-3">
+          <button
+            type="button"
+            id="settingsCancelBtn"
+            class="rounded-lg px-4 py-2 text-sm font-medium text-ink-600 transition hover:bg-ink-100"
+          >取消</button>
+          <button
+            type="submit"
+            class="rounded-lg bg-gradient-to-r from-purple-600 to-pink-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:shadow-md"
+          >保存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Toast -->
+    <div id="toast" class="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 translate-y-2 rounded-xl bg-ink-900 px-4 py-2.5 text-sm text-white opacity-0 shadow-2xl transition-all duration-300">
+      <span id="toastMessage"></span>
+    </div>
+
+    <script>
+      // ---------- Constants ----------
+      const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/images/generations';
+      const REQUEST_TIMEOUT_MS = 90_000;
+
+      const OPTIMIZE_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+      const OPTIMIZE_MODEL = 'glm-4-flash';
+      const OPTIMIZE_TIMEOUT_MS = 30_000;
+      const OPTIMIZE_SYSTEM_PROMPT = `你是专业的 AI 文生图提示词工程师。用户会给你一段简短的画面描述，请你把它扩写成一条高质量的中文文生图提示词。
+
+输出要求：
+1. 必须自然融入以下要素，不要分条列出：
+   - 主体：画面中的核心对象，及其状态、动作、服饰或特征
+   - 场景：环境、背景、氛围
+   - 风格：整体视觉风格（结合用户提供的风格倾向）
+   - 光线：光源类型、方向、强度、氛围感
+   - 色彩：主色调与色彩情绪
+   - 构图：视角、景别、前后景关系
+2. 忠于用户原始意图，不要无中生有新的主体或故事
+3. 使用中文逗号分隔的短语组合，语言精炼，整体控制在 80-150 字
+4. 直接输出最终提示词正文，不要任何前缀、编号、解释、引号或 Markdown 格式`;
+
+      // CogView has no native `style` parameter — style is injected into the prompt.
+      const STYLE_PROMPT_SUFFIX = {
+        realistic: '，写实风格，照片级真实感，光线自然，细节丰富，高分辨率',
+        artistic: '，艺术风格，绘画质感，富有表现力的色彩与笔触，插画感',
+      };
+      const STYLE_LABEL = { realistic: '写实风格', artistic: '艺术风格' };
+
+      const SETTINGS_KEY = 'ai-image-gen:settings';
+      const DEFAULT_SETTINGS = { apiKey: '', model: 'cogview-3-flash' };
+
+      const HISTORY_KEY = 'ai-image-gen:history';
+      const HISTORY_LIMIT = 50;
+
+      // ---------- DOM refs ----------
+      const $ = (id) => document.getElementById(id);
+      const promptEl = $('prompt');
+      const charCount = $('charCount');
+      const generateBtn = $('generateBtn');
+      const optimizeBtn = $('optimizeBtn');
+      const displayEmpty = $('displayEmpty');
+      const displayLoading = $('displayLoading');
+      const displayImage = $('displayImage');
+      const displayError = $('displayError');
+      const displayMeta = $('displayMeta');
+      const metaSize = $('metaSize');
+      const metaStyle = $('metaStyle');
+      const metaTime = $('metaTime');
+      const errorTitle = $('errorTitle');
+      const errorMessage = $('errorMessage');
+      const retryBtn = $('retryBtn');
+      const downloadBtn = $('downloadBtn');
+      const settingsBtn = $('settingsBtn');
+      const settingsDialog = $('settingsDialog');
+      const settingsForm = $('settingsForm');
+      const settingsCloseBtn = $('settingsCloseBtn');
+      const settingsCancelBtn = $('settingsCancelBtn');
+      const apiKeyInput = $('apiKeyInput');
+      const modelSelect = $('modelSelect');
+      const toast = $('toast');
+      const toastMessage = $('toastMessage');
+      const historyEmpty = $('historyEmpty');
+      const historyList = $('historyList');
+      const historyItemTpl = $('historyItemTpl');
+      const clearHistoryBtn = $('clearHistoryBtn');
+
+      // ---------- State ----------
+      let settings = loadSettings();
+      let currentRequest = null; // AbortController
+      let lastParams = null;     // for retry
+      let lastImageUrl = null;   // for download
+
+      // Capture original button markup so loading states can restore cleanly.
+      const ORIGINAL_GENERATE_HTML = generateBtn.innerHTML;
+      const ORIGINAL_OPTIMIZE_HTML = optimizeBtn.innerHTML;
+      const ORIGINAL_DOWNLOAD_HTML = downloadBtn.innerHTML;
+      const SPINNER_SVG = `<svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v3a5 5 0 0 0-5 5H4Z"/></svg>`;
+      const SPINNER_SVG_SM = `<svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v3a5 5 0 0 0-5 5H4Z"/></svg>`;
+
+      // ---------- Settings persistence ----------
+      function loadSettings() {
+        try {
+          const raw = localStorage.getItem(SETTINGS_KEY);
+          return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS };
+        } catch {
+          return { ...DEFAULT_SETTINGS };
+        }
+      }
+      function saveSettings(next) {
+        settings = { ...settings, ...next };
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      }
+
+      // Route remote image URLs through the local proxy when the page is
+      // served over http(s) — needed to work around the Zhipu image CDN
+      // being unreachable from some local networks (TLS handshake fails).
+      // When opened via file://, we have no proxy, so return the URL as-is.
+      function proxied(url) {
+        if (!url) return url;
+        if (location.protocol === 'file:') return url;
+        if (!/^https?:/i.test(url)) return url;
+        // Same-origin URLs don't need proxying.
+        try {
+          const u = new URL(url);
+          if (u.origin === location.origin) return url;
+        } catch { /* ignore */ }
+        return `/proxy?url=${encodeURIComponent(url)}`;
+      }
+
+      // ---------- UI helpers ----------
+      function showState(state) {
+        const map = {
+          empty: displayEmpty,
+          loading: displayLoading,
+          image: displayImage,
+          error: displayError,
+        };
+        Object.entries(map).forEach(([key, el]) => {
+          const active = key === state;
+          el.classList.toggle('hidden', !active);
+          if (el !== displayImage) el.classList.toggle('flex', active);
+        });
+        displayMeta.classList.toggle('hidden', state !== 'image');
+        displayMeta.classList.toggle('flex', state === 'image');
+        downloadBtn.disabled = state !== 'image';
+      }
+
+      function showToast(message) {
+        toastMessage.textContent = message;
+        toast.style.opacity = '1';
+        toast.style.transform = 'translate(-50%, 0)';
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translate(-50%, 8px)';
+        }, 2400);
+      }
+
+      function setGenerating(isGenerating) {
+        generateBtn.disabled = isGenerating;
+        optimizeBtn.disabled = isGenerating;
+        generateBtn.innerHTML = isGenerating
+          ? `${SPINNER_SVG} 生成中...`
+          : ORIGINAL_GENERATE_HTML;
+      }
+
+      function setOptimizing(isOptimizing) {
+        optimizeBtn.disabled = isOptimizing;
+        generateBtn.disabled = isOptimizing;
+        optimizeBtn.innerHTML = isOptimizing
+          ? `${SPINNER_SVG} 优化中...`
+          : ORIGINAL_OPTIMIZE_HTML;
+      }
+
+      function showError(title, message) {
+        errorTitle.textContent = title;
+        errorMessage.textContent = message;
+        showState('error');
+      }
+
+      // ---------- Error mapping ----------
+      class ApiError extends Error {
+        constructor(status, message) { super(message); this.status = status; }
+      }
+
+      function friendlyError(err) {
+        if (err instanceof ApiError) {
+          switch (err.status) {
+            case 401: return { title: 'API Key 无效', message: '请在"设置"中检查你的智谱 AI API Key 是否正确。' };
+            case 403: return { title: '无权访问', message: '当前账号无权调用该模型，请确认模型是否已开通。' };
+            case 408: return { title: '生成超时', message: '请求超过了 90 秒仍未返回，请稍后再试或更换模型。' };
+            case 429: return { title: '请求过于频繁', message: '触发了限流，请稍等片刻后再试。' };
+            case 400: return { title: '参数有误', message: err.message || '请检查提示词与尺寸后重试。' };
+            default:
+              if (err.status >= 500) {
+                return { title: '服务暂时不可用', message: '智谱 AI 服务出现异常，请稍后再试。' };
+              }
+              return { title: '生成失败', message: err.message || '请稍后重试。' };
+          }
+        }
+        if (err?.name === 'AbortError') {
+          return { title: '已取消', message: '本次生成已中止。' };
+        }
+        if (err instanceof TypeError) {
+          return {
+            title: '网络请求失败',
+            message: '可能是网络不通，或浏览器因 CORS 被阻止。建议通过开发服务器代理或后端转发调用。',
+          };
+        }
+        return { title: '未知错误', message: err?.message || '请稍后重试。' };
+      }
+
+      // ---------- Core: call ZhipuAI ----------
+      async function generateImage({ prompt, size, style, apiKey, model }) {
+        const fullPrompt = prompt.trim() + (STYLE_PROMPT_SUFFIX[style] || '');
+
+        const controller = new AbortController();
+        currentRequest = controller;
+        const timeoutId = setTimeout(() => controller.abort('timeout'), REQUEST_TIMEOUT_MS);
+
+        try {
+          const response = await fetch(ZHIPU_API_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({ model, prompt: fullPrompt, size }),
+            signal: controller.signal,
+          });
+
+          if (!response.ok) {
+            const detail = await response.json().catch(() => null);
+            const apiMessage = detail?.error?.message || detail?.msg || response.statusText;
+            throw new ApiError(response.status, apiMessage);
+          }
+
+          const data = await response.json();
+          const url = data?.data?.[0]?.url;
+          if (!url) throw new ApiError(502, '返回数据格式异常，未找到图片 URL');
+          return { url, fullPrompt };
+        } catch (err) {
+          if (err?.name === 'AbortError' && controller.signal.reason === 'timeout') {
+            throw new ApiError(408, '请求超时');
+          }
+          throw err;
+        } finally {
+          clearTimeout(timeoutId);
+          if (currentRequest === controller) currentRequest = null;
+        }
+      }
+
+      // ---------- Core: call GLM-4 to optimize the prompt ----------
+      async function optimizePrompt({ prompt, style, apiKey }) {
+        const styleHint = STYLE_LABEL[style] || '未指定';
+        const userMessage = `用户原始描述：\n${prompt}\n\n用户选择的风格倾向：${styleHint}\n\n请直接输出优化后的提示词。`;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort('timeout'), OPTIMIZE_TIMEOUT_MS);
+
+        try {
+          const response = await fetch(OPTIMIZE_API_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model: OPTIMIZE_MODEL,
+              temperature: 0.7,
+              messages: [
+                { role: 'system', content: OPTIMIZE_SYSTEM_PROMPT },
+                { role: 'user', content: userMessage },
+              ],
+            }),
+            signal: controller.signal,
+          });
+
+          if (!response.ok) {
+            const detail = await response.json().catch(() => null);
+            const apiMessage = detail?.error?.message || detail?.msg || response.statusText;
+            throw new ApiError(response.status, apiMessage);
+          }
+
+          const data = await response.json();
+          const content = data?.choices?.[0]?.message?.content?.trim();
+          if (!content) throw new ApiError(502, '返回数据格式异常，未找到优化结果');
+          // Strip wrapping quotes or code fences the model may add despite instructions.
+          return content
+            .replace(/^```[\w-]*\n?|\n?```$/g, '')
+            .replace(/^["'"'「『]+|["'"'」』]+$/g, '')
+            .trim();
+        } catch (err) {
+          if (err?.name === 'AbortError' && controller.signal.reason === 'timeout') {
+            throw new ApiError(408, '优化请求超时');
+          }
+          throw err;
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      }
+
+      // ---------- Generate flow ----------
+      function readCurrentParams() {
+        return {
+          prompt: promptEl.value.trim(),
+          size: document.querySelector('input[name="size"]:checked')?.value || '1024x1024',
+          style: document.querySelector('input[name="style"]:checked')?.value || 'realistic',
+        };
+      }
+
+      function formatSize(size) {
+        const [w, h] = size.split('x');
+        return `${w} × ${h}`;
+      }
+
+      async function runGenerate() {
+        const { prompt, size, style } = readCurrentParams();
+        if (!prompt) {
+          showToast('请先输入图片描述');
+          promptEl.focus();
+          return;
+        }
+        if (!settings.apiKey) {
+          openSettingsDialog();
+          showToast('请先在设置中填写 API Key');
+          return;
+        }
+
+        lastParams = { prompt, size, style };
+        showState('loading');
+        setGenerating(true);
+
+        try {
+          const { url } = await generateImage({
+            prompt,
+            size,
+            style,
+            apiKey: settings.apiKey,
+            model: settings.model,
+          });
+          await new Promise((resolve, reject) => {
+            displayImage.onload = resolve;
+            displayImage.onerror = () => reject(new ApiError(502, '图片加载失败'));
+            displayImage.src = proxied(url);
+          });
+          lastImageUrl = url;
+          const now = Date.now();
+          metaSize.textContent = formatSize(size);
+          metaStyle.textContent = STYLE_LABEL[style] || style;
+          metaTime.textContent = '刚刚';
+          showState('image');
+
+          const historyItem = {
+            id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
+            prompt,
+            size,
+            style,
+            imageUrl: url,
+            createdAt: now,
+          };
+          activeHistoryId = historyItem.id;
+          addHistory(historyItem);
+        } catch (err) {
+          const { title, message } = friendlyError(err);
+          showError(title, message);
+        } finally {
+          setGenerating(false);
+        }
+      }
+
+      // ---------- Download ----------
+      function triggerDownload(href, filename, revoke) {
+        const a = document.createElement('a');
+        a.href = href;
+        a.download = filename;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        if (revoke) URL.revokeObjectURL(href);
+      }
+
+      async function downloadImage() {
+        if (!lastImageUrl) return;
+
+        const filename = `ai-image-${Date.now()}.png`;
+        downloadBtn.disabled = true;
+        downloadBtn.innerHTML = `${SPINNER_SVG_SM} 下载中...`;
+
+        try {
+          // Primary path: fetch the image as a blob so the browser honors the
+          // `download` attribute regardless of the origin's Content-Disposition.
+          // Routed through the local proxy when available (same-origin) to
+          // bypass CDN TLS issues on some networks.
+          const res = await fetch(proxied(lastImageUrl), { mode: 'cors' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const blob = await res.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          triggerDownload(objectUrl, filename, true);
+          showToast('图片已开始下载');
+        } catch {
+          // Fallback for CORS-restricted image hosts: let the browser handle
+          // the URL directly. If the server doesn't send a download header,
+          // it may open in a new tab instead of saving.
+          try {
+            triggerDownload(lastImageUrl, filename, false);
+            showToast('已触发下载，若在新标签页打开请右键另存为');
+          } catch {
+            window.open(lastImageUrl, '_blank', 'noopener');
+            showToast('无法直接下载，已在新标签页打开图片');
+          }
+        } finally {
+          downloadBtn.innerHTML = ORIGINAL_DOWNLOAD_HTML;
+          // Keep button enabled only if a viewable image is still shown.
+          downloadBtn.disabled = displayImage.classList.contains('hidden');
+        }
+      }
+
+      // ---------- History ----------
+      let activeHistoryId = null;
+
+      function loadHistory() {
+        try {
+          const raw = localStorage.getItem(HISTORY_KEY);
+          const arr = raw ? JSON.parse(raw) : [];
+          return Array.isArray(arr) ? arr : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function writeHistory(items) {
+        try {
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(items));
+        } catch (e) {
+          // localStorage can throw QuotaExceededError when images metadata piles up.
+          // Trim aggressively and retry once so the user isn't silently blocked.
+          const trimmed = items.slice(0, Math.max(10, Math.floor(items.length / 2)));
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
+        }
+      }
+
+      function addHistory(item) {
+        const items = loadHistory();
+        items.unshift(item);
+        if (items.length > HISTORY_LIMIT) items.length = HISTORY_LIMIT;
+        writeHistory(items);
+        renderHistory();
+      }
+
+      function removeHistory(id) {
+        const items = loadHistory().filter((it) => it.id !== id);
+        writeHistory(items);
+        if (activeHistoryId === id) activeHistoryId = null;
+        renderHistory();
+      }
+
+      function clearHistory() {
+        writeHistory([]);
+        activeHistoryId = null;
+        renderHistory();
+      }
+
+      function formatRelativeTime(ts) {
+        const diff = Date.now() - ts;
+        const minute = 60_000;
+        const hour = 60 * minute;
+        const day = 24 * hour;
+        if (diff < 30_000) return '刚刚';
+        if (diff < hour) return `${Math.floor(diff / minute)} 分钟前`;
+        if (diff < day) return `${Math.floor(diff / hour)} 小时前`;
+        if (diff < 7 * day) return `${Math.floor(diff / day)} 天前`;
+        const d = new Date(ts);
+        return `${d.getMonth() + 1} 月 ${d.getDate()} 日`;
+      }
+
+      function renderHistory() {
+        const items = loadHistory();
+        historyList.innerHTML = '';
+
+        if (items.length === 0) {
+          historyEmpty.classList.remove('hidden');
+          historyList.classList.add('hidden');
+          return;
+        }
+        historyEmpty.classList.add('hidden');
+        historyList.classList.remove('hidden');
+
+        const frag = document.createDocumentFragment();
+        for (const item of items) {
+          const node = historyItemTpl.content.firstElementChild.cloneNode(true);
+          const img = node.querySelector('[data-thumb]');
+          const promptP = node.querySelector('[data-prompt]');
+          const timeP = node.querySelector('[data-time]');
+          const viewBtn = node.querySelector('[data-action="view"]');
+          const delBtn = node.querySelector('[data-action="delete"]');
+
+          img.src = proxied(item.imageUrl);
+          img.alt = item.prompt.slice(0, 24);
+          img.addEventListener('error', () => {
+            // Zhipu image URLs expire; mark the thumbnail as unavailable.
+            img.removeAttribute('src');
+            img.classList.add('bg-gradient-to-br', 'from-rose-500/30', 'to-orange-500/30');
+            img.alt = '图片已过期';
+          });
+
+          promptP.textContent = item.prompt;
+          timeP.textContent = formatRelativeTime(item.createdAt);
+          if (activeHistoryId === item.id) viewBtn.dataset.active = 'true';
+
+          viewBtn.addEventListener('click', () => viewHistoryItem(item));
+          delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeHistory(item.id);
+          });
+
+          frag.appendChild(node);
+        }
+        historyList.appendChild(frag);
+      }
+
+      function viewHistoryItem(item) {
+        if (generateBtn.disabled) {
+          showToast('请等待当前操作完成');
+          return;
+        }
+        activeHistoryId = item.id;
+        // Show the saved image in the main display area.
+        const finish = () => {
+          lastImageUrl = item.imageUrl;
+          lastParams = { prompt: item.prompt, size: item.size, style: item.style };
+          metaSize.textContent = formatSize(item.size);
+          metaStyle.textContent = STYLE_LABEL[item.style] || item.style;
+          metaTime.textContent = formatRelativeTime(item.createdAt);
+          showState('image');
+          // Refresh sidebar so the active item is highlighted.
+          renderHistory();
+        };
+        if (lastImageUrl === item.imageUrl) {
+          finish();
+          return;
+        }
+        displayImage.onload = finish;
+        displayImage.onerror = () => {
+          showError('图片已失效', '该历史图片的链接已过期，智谱 AI 图片 URL 通常在 30 天后失效。');
+        };
+        displayImage.src = proxied(item.imageUrl);
+      }
+
+      // ---------- Settings dialog ----------
+      function openSettingsDialog() {
+        apiKeyInput.value = settings.apiKey || '';
+        modelSelect.value = settings.model || 'cogview-3-flash';
+        if (typeof settingsDialog.showModal === 'function') {
+          settingsDialog.showModal();
+        } else {
+          settingsDialog.setAttribute('open', 'true');
+        }
+        setTimeout(() => apiKeyInput.focus(), 50);
+      }
+      function closeSettingsDialog() {
+        if (settingsDialog.open) settingsDialog.close();
+        else settingsDialog.removeAttribute('open');
+      }
+
+      // ---------- Events ----------
+      promptEl.addEventListener('input', () => {
+        charCount.textContent = `${promptEl.value.length} / 1000`;
+      });
+
+      generateBtn.addEventListener('click', runGenerate);
+      retryBtn.addEventListener('click', () => {
+        if (lastParams) runGenerate();
+        else showState('empty');
+      });
+      downloadBtn.addEventListener('click', downloadImage);
+
+      settingsBtn?.addEventListener('click', openSettingsDialog);
+      settingsCloseBtn.addEventListener('click', closeSettingsDialog);
+      settingsCancelBtn.addEventListener('click', closeSettingsDialog);
+      settingsForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        saveSettings({
+          apiKey: apiKeyInput.value.trim(),
+          model: modelSelect.value,
+        });
+        closeSettingsDialog();
+        showToast('设置已保存');
+      });
+
+      async function runOptimize() {
+        const raw = promptEl.value.trim();
+        if (!raw) {
+          showToast('请先输入图片描述');
+          promptEl.focus();
+          return;
+        }
+        if (!settings.apiKey) {
+          openSettingsDialog();
+          showToast('请先在设置中填写 API Key');
+          return;
+        }
+
+        const { style } = readCurrentParams();
+        setOptimizing(true);
+        try {
+          const optimized = await optimizePrompt({
+            prompt: raw,
+            style,
+            apiKey: settings.apiKey,
+          });
+          promptEl.value = optimized;
+          promptEl.dispatchEvent(new Event('input'));
+          // Move caret to end and keep textarea scrolled to the top for readability.
+          promptEl.setSelectionRange(optimized.length, optimized.length);
+          promptEl.scrollTop = 0;
+          showToast('提示词已优化');
+        } catch (err) {
+          const { title, message } = friendlyError(err);
+          showToast(`${title}：${message}`);
+        } finally {
+          setOptimizing(false);
+        }
+      }
+
+      optimizeBtn.addEventListener('click', runOptimize);
+
+      // Keyboard: Cmd/Ctrl + Enter triggers generate
+      promptEl.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+          e.preventDefault();
+          runGenerate();
+        }
+      });
+
+      clearHistoryBtn.addEventListener('click', () => {
+        if (loadHistory().length === 0) return;
+        if (confirm('确定要清空所有历史记录吗？此操作无法撤销。')) {
+          clearHistory();
+          showToast('历史记录已清空');
+        }
+      });
+
+      // Initial render + periodic relative-time refresh (every minute).
+      renderHistory();
+      setInterval(renderHistory, 60_000);
+
+      // Hint the user if no API key on first load.
+      if (!settings.apiKey) {
+        setTimeout(() => showToast('首次使用请在「设置」中填写 API Key'), 600);
+      }
+    </script>
+  </body>
+</html>

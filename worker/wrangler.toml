@@ -1,0 +1,11 @@
+name = "ai-image-proxy"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# Uncomment and set after binding a custom domain if desired.
+# routes = [
+#   { pattern = "proxy.example.com/*", zone_name = "example.com" }
+# ]
+
+[observability]
+enabled = true
