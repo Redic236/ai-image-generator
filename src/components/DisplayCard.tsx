@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import JSZip from 'jszip';
 import { proxied } from '../lib/proxied';
 import { formatRelativeTime, formatSize } from '../lib/format';
 import { STYLE_LABEL } from '../lib/constants';
@@ -16,15 +17,19 @@ interface DisplayCardProps {
 export function DisplayCard({ state, onGenerate, onRetryTile, onDismissTile }: DisplayCardProps) {
   const { showToast } = useToast();
   const [downloading, setDownloading] = useState(false);
+  const [zipping, setZipping] = useState(false);
 
-  // "Primary" = first successful tile in the current batch. Header actions act on it.
-  const primaryTile: Extract<BatchTile, { status: 'image' }> | null =
+  // All successful tiles (used by zip download). "Primary" = the first one,
+  // which is what the header copy / regenerate / single-download buttons act on.
+  const successfulTiles: Array<Extract<BatchTile, { status: 'image' }>> =
     state.type === 'batch'
-      ? (state.tiles.find((t): t is Extract<BatchTile, { status: 'image' }> =>
+      ? state.tiles.filter((t): t is Extract<BatchTile, { status: 'image' }> =>
           t.status === 'image'
-        ) ?? null)
-      : null;
+        )
+      : [];
+  const primaryTile = successfulTiles[0] ?? null;
   const hasImage = !!primaryTile;
+  const canZip = successfulTiles.length >= 2;
 
   const handleDownload = async () => {
     if (!primaryTile) return;
@@ -71,6 +76,33 @@ export function DisplayCard({ state, onGenerate, onRetryTile, onDismissTile }: D
     });
   };
 
+  const handleDownloadZip = async () => {
+    if (successfulTiles.length === 0) return;
+    setZipping(true);
+    try {
+      const zip = new JSZip();
+      const fetched = await Promise.all(
+        successfulTiles.map(async (tile) => {
+          const res = await fetch(proxied(tile.item.imageUrl), { mode: 'cors' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.blob();
+        })
+      );
+      fetched.forEach((blob, idx) => {
+        zip.file(`ai-image-${idx + 1}.png`, blob);
+      });
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      triggerDownload(url, `ai-images-${Date.now()}.zip`);
+      URL.revokeObjectURL(url);
+      showToast(`已打包 ${successfulTiles.length} 张图片`);
+    } catch {
+      showToast('打包失败，部分图片可能无法访问');
+    } finally {
+      setZipping(false);
+    }
+  };
+
   return (
     <section className="glass rounded-3xl p-6 shadow-card md:p-8">
       <div className="mb-4 flex items-center justify-between gap-2">
@@ -114,7 +146,7 @@ export function DisplayCard({ state, onGenerate, onRetryTile, onDismissTile }: D
           )}
           <button
             onClick={handleDownload}
-            disabled={!hasImage || downloading}
+            disabled={!hasImage || downloading || zipping}
             className="inline-flex items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-medium text-ink-600 transition hover:border-purple-300 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {downloading ? (
@@ -141,6 +173,38 @@ export function DisplayCard({ state, onGenerate, onRetryTile, onDismissTile }: D
               </>
             )}
           </button>
+          {canZip && (
+            <button
+              onClick={handleDownloadZip}
+              disabled={zipping || downloading}
+              title="将本批所有图片打包为 ZIP 下载"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {zipping ? (
+                <>
+                  <Spinner className="h-3.5 w-3.5" />
+                  打包中...
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="h-3.5 w-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
+                    />
+                  </svg>
+                  下载全部 ({successfulTiles.length})
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
