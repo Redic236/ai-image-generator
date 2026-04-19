@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { proxied } from '../lib/proxied';
 import { formatRelativeTime, formatSize } from '../lib/format';
 import { STYLE_LABEL } from '../lib/constants';
@@ -523,6 +523,16 @@ function ImageTile({ item, onDismiss }: ImageTileProps) {
   const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
   const [reloadKey, setReloadKey] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  // Guards img.onLoad / img.onError callbacks that may fire after the
+  // component has unmounted (rapid history navigation), preventing the
+  // React "setState on unmounted" warning.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     setStatus('loading');
@@ -594,8 +604,12 @@ function ImageTile({ item, onDismiss }: ImageTileProps) {
         src={proxied(item.imageUrl)}
         alt={item.prompt.slice(0, 60)}
         decoding="async"
-        onLoad={() => setStatus('ok')}
-        onError={() => setStatus('error')}
+        onLoad={() => {
+          if (mountedRef.current) setStatus('ok');
+        }}
+        onError={() => {
+          if (mountedRef.current) setStatus('error');
+        }}
         onClick={() => status === 'ok' && setLightboxOpen(true)}
         className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
           status === 'ok' ? 'cursor-zoom-in opacity-100' : 'opacity-0'
