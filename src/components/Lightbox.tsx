@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { lockBodyScroll, unlockBodyScroll } from '../lib/bodyScrollLock';
 
 interface LightboxProps {
   src: string;
@@ -20,13 +21,11 @@ export function Lightbox({ src, alt, onClose }: LightboxProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  // Lock body scroll while open
+  // Lock body scroll while open — uses a ref-counted helper so nested /
+  // overlapping overlays don't permanently leave body in `overflow: hidden`.
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    lockBodyScroll();
+    return unlockBodyScroll;
   }, []);
 
   return (
