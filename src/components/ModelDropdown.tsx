@@ -11,18 +11,18 @@ function splitLabel(label: string): { name: string; desc: string } {
 
 export function ModelDropdown() {
   const { settings, updateSettings } = useSettings();
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!isOpen) return;
     function onPointerDown(e: PointerEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
+        setIsOpen(false);
       }
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') setIsOpen(false);
     }
     window.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('keydown', onKey);
@@ -30,7 +30,7 @@ export function ModelDropdown() {
       window.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [isOpen]);
 
   const current = MODEL_OPTIONS.find((m) => m.value === settings.model);
   const currentLabel = current ? splitLabel(current.label) : { name: settings.model, desc: '' };
@@ -38,9 +38,9 @@ export function ModelDropdown() {
   return (
     <div ref={containerRef} className="relative">
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setIsOpen((v) => !v)}
         aria-haspopup="listbox"
-        aria-expanded={open}
+        aria-expanded={isOpen}
         aria-label={`当前模型 ${currentLabel.name}，点击切换`}
         title="切换模型"
         className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white/80 transition hover:bg-white/10 sm:px-3"
@@ -60,7 +60,7 @@ export function ModelDropdown() {
         </svg>
         <span className="hidden font-medium sm:inline">{currentLabel.name}</span>
         <svg
-          className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`h-3 w-3 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -70,7 +70,7 @@ export function ModelDropdown() {
         </svg>
       </button>
 
-      {open && (
+      {isOpen && (
         <div
           role="listbox"
           className="absolute right-0 top-full z-30 mt-1.5 w-60 overflow-hidden rounded-xl border border-ink-200 bg-white shadow-2xl dark:border-ink-700 dark:bg-ink-800"
@@ -85,7 +85,7 @@ export function ModelDropdown() {
                 aria-selected={selected}
                 onClick={() => {
                   updateSettings({ model: opt.value });
-                  setOpen(false);
+                  setIsOpen(false);
                 }}
                 className={`flex w-full items-start gap-2.5 px-3.5 py-2.5 text-left transition ${
                   selected

@@ -15,20 +15,20 @@ import { useImageGenerator } from './hooks/useImageGenerator';
 import { usePromptOptimizer } from './hooks/usePromptOptimizer';
 
 function AppShell() {
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [promptValue, setPromptValue] = useState('');
   const { settings } = useSettings();
   const { showToast } = useToast();
   const { items: historyItems } = useHistory();
 
-  const openSettings = useCallback(() => setSettingsOpen(true), []);
-  const closeSettings = useCallback(() => setSettingsOpen(false), []);
-  const openSidebar = useCallback(() => setSidebarOpen(true), []);
-  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
-  const openShortcuts = useCallback(() => setShortcutsOpen(true), []);
-  const closeShortcuts = useCallback(() => setShortcutsOpen(false), []);
+  const openSettings = useCallback(() => setIsSettingsOpen(true), []);
+  const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
+  const openSidebar = useCallback(() => setIsSidebarOpen(true), []);
+  const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
+  const openShortcuts = useCallback(() => setIsShortcutsOpen(true), []);
+  const closeShortcuts = useCallback(() => setIsShortcutsOpen(false), []);
 
   // Global keyboard shortcuts. ? opens help, / focuses prompt.
   // Both only fire when the user is NOT typing inside an input/textarea.
@@ -44,7 +44,7 @@ function AppShell() {
 
       if (e.key === '?') {
         e.preventDefault();
-        setShortcutsOpen(true);
+        setIsShortcutsOpen(true);
       } else if (e.key === '/') {
         e.preventDefault();
         document.getElementById('prompt')?.focus();
@@ -76,7 +76,7 @@ function AppShell() {
       <div className="mx-auto flex min-h-screen max-w-[1400px] gap-6 p-4 md:p-6 lg:p-8">
         <Sidebar
           onSelectItem={viewHistoryItem}
-          mobileOpen={sidebarOpen}
+          mobileOpen={isSidebarOpen}
           onMobileClose={closeSidebar}
         />
         <main className="flex min-w-0 flex-1 flex-col gap-6">
@@ -105,8 +105,8 @@ function AppShell() {
           </footer>
         </main>
       </div>
-      <SettingsDialog open={settingsOpen} onClose={closeSettings} />
-      <ShortcutsDialog open={shortcutsOpen} onClose={closeShortcuts} />
+      <SettingsDialog open={isSettingsOpen} onClose={closeSettings} />
+      <ShortcutsDialog open={isShortcutsOpen} onClose={closeShortcuts} />
       <Toast />
     </div>
   );
