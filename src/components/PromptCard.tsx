@@ -3,6 +3,19 @@ import type { KeyboardEvent } from 'react';
 import { SIZE_OPTIONS, STYLE_OPTIONS } from '../lib/constants';
 import type { GenerateParams, ImageSize, ImageStyle } from '../types';
 
+const EXAMPLE_PROMPTS = [
+  '夕阳下的京都老街，樱花纷飞',
+  '赛博朋克少女，霓虹灯反射的雨夜',
+  '水彩画风格的秋日山林',
+  '极简主义风格的咖啡馆内景',
+];
+
+function charCountClass(length: number): string {
+  if (length > 900) return 'text-rose-500';
+  if (length > 800) return 'text-amber-500';
+  return 'text-ink-400';
+}
+
 interface PromptCardProps {
   promptValue: string;
   onPromptChange: (value: string) => void;
@@ -43,7 +56,9 @@ export function PromptCard({
             <StepBadge n={1} />
             描述你想要的画面
           </label>
-          <span className="text-xs text-ink-400">{promptValue.length} / 1000</span>
+          <span className={`text-xs transition-colors ${charCountClass(promptValue.length)}`}>
+            {promptValue.length} / 1000
+          </span>
         </div>
         <div className="relative">
           <textarea
@@ -60,6 +75,21 @@ export function PromptCard({
             Ctrl + Enter 生成
           </div>
         </div>
+        {promptValue.trim().length === 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] text-ink-400">试试：</span>
+            {EXAMPLE_PROMPTS.map((example) => (
+              <button
+                key={example}
+                type="button"
+                onClick={() => onPromptChange(example)}
+                className="rounded-full border border-ink-200 bg-white/60 px-2.5 py-1 text-[11px] text-ink-600 transition hover:border-purple-300 hover:bg-white hover:text-purple-600"
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">

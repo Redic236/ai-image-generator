@@ -50,7 +50,7 @@ function AppShell() {
             isGenerating={isGenerating}
             isOptimizing={isOptimizing}
           />
-          <DisplayCard state={display} onRetry={retry} />
+          <DisplayCard state={display} onRetry={retry} onGenerate={generate} />
           <footer className="pb-2 text-center text-[11px] text-white/40">
             由智谱 AI 驱动 · 本地保存历史记录
           </footer>

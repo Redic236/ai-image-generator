@@ -1,16 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { proxied } from '../lib/proxied';
 import { formatRelativeTime, formatSize } from '../lib/format';
 import { STYLE_LABEL } from '../lib/constants';
 import { useToast } from '../context/ToastContext';
-import type { DisplayState } from '../types';
+import type { DisplayState, GenerateParams, HistoryItem } from '../types';
 
 interface DisplayCardProps {
   state: DisplayState;
   onRetry: () => void;
+  onGenerate: (params: GenerateParams) => void;
 }
 
-export function DisplayCard({ state, onRetry }: DisplayCardProps) {
+export function DisplayCard({ state, onRetry, onGenerate }: DisplayCardProps) {
   const { showToast } = useToast();
   const [downloading, setDownloading] = useState(false);
 
@@ -42,11 +43,66 @@ export function DisplayCard({ state, onRetry }: DisplayCardProps) {
     }
   };
 
+  const handleCopyPrompt = async () => {
+    if (state.type !== 'image') return;
+    try {
+      await navigator.clipboard.writeText(state.item.prompt);
+      showToast('提示词已复制');
+    } catch {
+      showToast('复制失败，请手动选择文本');
+    }
+  };
+
+  const handleRegenerate = () => {
+    if (state.type !== 'image') return;
+    onGenerate({
+      prompt: state.item.prompt,
+      size: state.item.size,
+      style: state.item.style,
+    });
+  };
+
   return (
     <section className="glass rounded-3xl p-6 shadow-card md:p-8">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-ink-800">生成结果</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          {hasImage && (
+            <>
+              <IconButton onClick={handleCopyPrompt} title="复制提示词">
+                <svg
+                  className="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
+                  />
+                </svg>
+                复制提示词
+              </IconButton>
+              <IconButton onClick={handleRegenerate} title="用相同参数重新生成">
+                <svg
+                  className="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
+                  />
+                </svg>
+                重新生成
+              </IconButton>
+            </>
+          )}
           <button
             onClick={handleDownload}
             disabled={!hasImage || downloading}
@@ -82,14 +138,7 @@ export function DisplayCard({ state, onRetry }: DisplayCardProps) {
       <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-ink-200 bg-ink-50 md:aspect-[4/3]">
         {state.type === 'empty' && <EmptyState />}
         {state.type === 'loading' && <LoadingState />}
-        {state.type === 'image' && (
-          <img
-            key={state.item.id}
-            src={proxied(state.item.imageUrl)}
-            alt={state.item.prompt.slice(0, 40)}
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-        )}
+        {state.type === 'image' && <ImageSlot item={state.item} />}
         {state.type === 'error' && (
           <ErrorState title={state.title} message={state.message} onRetry={onRetry} />
         )}
@@ -112,6 +161,26 @@ export function DisplayCard({ state, onRetry }: DisplayCardProps) {
   );
 }
 
+function IconButton({
+  onClick,
+  title,
+  children,
+}: {
+  onClick: () => void;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className="hidden items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-medium text-ink-600 transition hover:border-purple-300 hover:text-purple-600 sm:inline-flex"
+    >
+      {children}
+    </button>
+  );
+}
+
 function triggerDownload(href: string, filename: string) {
   const a = document.createElement('a');
   a.href = href;
@@ -128,6 +197,83 @@ function Spinner({ className = '' }: { className?: string }) {
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
       <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v3a5 5 0 0 0-5 5H4Z" />
     </svg>
+  );
+}
+
+function ImageSlot({ item }: { item: HistoryItem }) {
+  const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Reset to loading state whenever the item changes.
+  useEffect(() => {
+    setStatus('loading');
+  }, [item.id]);
+
+  if (status === 'error') {
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-50 p-8 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-400 to-slate-500 shadow-lg">
+          <svg
+            className="h-7 w-7 text-white"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm-1.5-1.5L22 22"
+            />
+          </svg>
+        </div>
+        <p className="mt-4 text-sm font-semibold text-ink-700">图片暂不可用</p>
+        <p className="mt-1 max-w-sm text-xs leading-relaxed text-ink-500">
+          可能是网络波动或 CDN 临时失效。智谱 AI 图片 URL 通常在 30 天后失效。
+        </p>
+        <button
+          onClick={() => {
+            setStatus('loading');
+            setReloadKey((k) => k + 1);
+          }}
+          className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-medium text-ink-600 transition hover:border-purple-300 hover:text-purple-600"
+        >
+          <svg
+            className="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
+            />
+          </svg>
+          重试加载
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {status === 'loading' && (
+        <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-ink-100 via-white to-ink-100 bg-[length:1000px_100%]" />
+      )}
+      <img
+        key={`${item.id}-${reloadKey}`}
+        src={proxied(item.imageUrl)}
+        alt={item.prompt.slice(0, 60)}
+        decoding="async"
+        onLoad={() => setStatus('ok')}
+        onError={() => setStatus('error')}
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
+          status === 'ok' ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+    </>
   );
 }
 
@@ -161,6 +307,14 @@ function EmptyState() {
 }
 
 function LoadingState() {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const start = Date.now();
+    const id = setInterval(() => setElapsed(Date.now() - start), 500);
+    return () => clearInterval(id);
+  }, []);
+  const seconds = Math.floor(elapsed / 1000);
+
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-50 p-8">
       <div className="shimmer absolute inset-0 animate-shimmer" />
@@ -169,11 +323,7 @@ function LoadingState() {
           <div className="absolute inset-0 animate-ping rounded-full bg-purple-500/30" />
           <div className="absolute inset-2 animate-ping rounded-full bg-pink-500/30 [animation-delay:0.4s]" />
           <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 shadow-glow">
-            <svg
-              className="h-5 w-5 animate-spin text-white"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
+            <svg className="h-5 w-5 animate-spin text-white" viewBox="0 0 24 24" fill="none">
               <circle
                 className="opacity-25"
                 cx="12"
@@ -191,7 +341,10 @@ function LoadingState() {
           </div>
         </div>
         <p className="mt-5 text-sm font-semibold text-ink-800">AI 正在作画中...</p>
-        <p className="mt-1 text-xs text-ink-400">通常需要 10-30 秒，请稍候</p>
+        <p className="mt-1 text-xs text-ink-400">
+          {seconds > 0 ? `已耗时 ${seconds}s · ` : ''}
+          通常需要 10-30 秒
+        </p>
       </div>
     </div>
   );
