@@ -9,6 +9,7 @@ import { SettingsProvider, useSettings } from './context/SettingsContext';
 import { HistoryProvider, useHistory } from './context/HistoryContext';
 import { ToastProvider, useToast } from './context/ToastContext';
 import { FavoritesProvider } from './context/FavoritesContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { useImageGenerator } from './hooks/useImageGenerator';
 import { usePromptOptimizer } from './hooks/usePromptOptimizer';
 
@@ -83,14 +84,16 @@ function AppShell() {
 
 export default function App() {
   return (
-    <SettingsProvider>
-      <HistoryProvider>
-        <FavoritesProvider>
-          <ToastProvider>
-            <AppShell />
-          </ToastProvider>
-        </FavoritesProvider>
-      </HistoryProvider>
-    </SettingsProvider>
+    <ThemeProvider>
+      <SettingsProvider>
+        <HistoryProvider>
+          <FavoritesProvider>
+            <ToastProvider>
+              <AppShell />
+            </ToastProvider>
+          </FavoritesProvider>
+        </HistoryProvider>
+      </SettingsProvider>
+    </ThemeProvider>
   );
 }

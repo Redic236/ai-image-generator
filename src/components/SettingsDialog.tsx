@@ -40,15 +40,15 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      className="w-[min(92vw,440px)] rounded-2xl border border-ink-200 bg-white p-0 shadow-2xl backdrop:bg-ink-900/60 backdrop:backdrop-blur-sm"
+      className="w-[min(92vw,440px)] rounded-2xl border border-ink-200 bg-white p-0 text-ink-800 shadow-2xl backdrop:bg-ink-900/60 backdrop:backdrop-blur-sm dark:border-ink-700 dark:bg-ink-800 dark:text-ink-100"
     >
       <form onSubmit={handleSubmit} className="flex flex-col">
-        <div className="flex items-center justify-between border-b border-ink-100 px-6 py-4">
-          <h3 className="text-base font-semibold text-ink-800">设置</h3>
+        <div className="flex items-center justify-between border-b border-ink-100 px-6 py-4 dark:border-ink-700">
+          <h3 className="text-base font-semibold text-ink-800 dark:text-ink-100">设置</h3>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1 text-ink-400 transition hover:bg-ink-50 hover:text-ink-700"
+            className="rounded-lg p-1 text-ink-400 transition hover:bg-ink-50 hover:text-ink-700 dark:hover:bg-ink-700 dark:hover:text-ink-100"
             aria-label="关闭"
           >
             <svg
@@ -65,7 +65,10 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
         <div className="space-y-5 px-6 py-5">
           <div>
-            <label htmlFor="apiKey" className="mb-1.5 block text-sm font-medium text-ink-700">
+            <label
+              htmlFor="apiKey"
+              className="mb-1.5 block text-sm font-medium text-ink-700 dark:text-ink-200"
+            >
               智谱 AI API Key
             </label>
             <input
@@ -76,15 +79,15 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               placeholder="xxxxxxxx.xxxxxxxxxxxxxxxx"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2.5 text-sm text-ink-800 placeholder-ink-300 outline-none transition focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
+              className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2.5 text-sm text-ink-800 placeholder-ink-300 outline-none transition focus:border-purple-400 focus:ring-4 focus:ring-purple-100 dark:border-ink-700 dark:bg-ink-900 dark:text-ink-100 dark:placeholder-ink-500 dark:focus:ring-purple-900/40"
             />
-            <p className="mt-1.5 text-[11px] leading-relaxed text-ink-400">
+            <p className="mt-1.5 text-[11px] leading-relaxed text-ink-400 dark:text-ink-500">
               前往{' '}
               <a
                 href="https://bigmodel.cn/usercenter/proj-mgmt/apikeys"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-purple-600 hover:underline"
+                className="text-purple-600 hover:underline dark:text-purple-400"
               >
                 智谱 AI 开放平台
               </a>{' '}
@@ -92,14 +95,17 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
             </p>
           </div>
           <div>
-            <label htmlFor="model" className="mb-1.5 block text-sm font-medium text-ink-700">
+            <label
+              htmlFor="model"
+              className="mb-1.5 block text-sm font-medium text-ink-700 dark:text-ink-200"
+            >
               模型
             </label>
             <select
               id="model"
               value={model}
               onChange={(e) => setModel(e.target.value as ImageModel)}
-              className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2.5 text-sm text-ink-800 outline-none transition focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
+              className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2.5 text-sm text-ink-800 outline-none transition focus:border-purple-400 focus:ring-4 focus:ring-purple-100 dark:border-ink-700 dark:bg-ink-900 dark:text-ink-100 dark:focus:ring-purple-900/40"
             >
               {MODEL_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -110,11 +116,11 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-ink-100 bg-ink-50/50 px-6 py-3">
+        <div className="flex items-center justify-end gap-2 border-t border-ink-100 bg-ink-50/50 px-6 py-3 dark:border-ink-700 dark:bg-ink-900/40">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-ink-600 transition hover:bg-ink-100"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-ink-600 transition hover:bg-ink-100 dark:text-ink-300 dark:hover:bg-ink-700"
           >
             取消
           </button>

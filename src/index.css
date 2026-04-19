@@ -28,6 +28,30 @@
     -webkit-backdrop-filter: blur(18px) saturate(140%);
     border: 1px solid rgba(255, 255, 255, 0.6);
   }
+  .dark .glass {
+    background: rgba(27, 31, 51, 0.55);
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+  /* Re-map common light-mode utilities to dark equivalents when inside
+     a .glass card under dark mode. Uses :where() to keep specificity
+     low so any explicit dark: variant still wins. */
+  .dark .glass :where(.text-ink-800) { color: theme('colors.ink.100'); }
+  .dark .glass :where(.text-ink-700) { color: theme('colors.ink.200'); }
+  .dark .glass :where(.text-ink-600) { color: theme('colors.ink.300'); }
+  .dark .glass :where(.text-ink-500) { color: theme('colors.ink.400'); }
+  .dark .glass :where(.text-ink-400) { color: theme('colors.ink.500'); }
+  .dark .glass :where(.text-ink-300) { color: theme('colors.ink.600'); }
+  .dark .glass :where(.bg-white) { background-color: rgb(27 31 51 / 1); }
+  .dark .glass :where(.bg-white\/70) { background-color: rgb(15 17 34 / 0.5); }
+  .dark .glass :where(.bg-white\/60) { background-color: rgb(15 17 34 / 0.4); }
+  .dark .glass :where(.bg-white\/50) { background-color: rgb(15 17 34 / 0.3); }
+  .dark .glass :where(.border-ink-200) { border-color: theme('colors.ink.700'); }
+  .dark .glass :where(.border-ink-100) { border-color: theme('colors.ink.800'); }
+  .dark .glass :where(.bg-ink-100) { background-color: theme('colors.ink.800'); }
+  .dark .glass :where(.bg-ink-50) { background-color: theme('colors.ink.900'); }
+  .dark .glass :where(.bg-ink-50\/50) { background-color: rgb(15 17 34 / 0.4); }
+  .dark .glass :where(.placeholder-ink-400)::placeholder { color: theme('colors.ink.500'); }
+  .dark .glass :where(.placeholder-ink-300)::placeholder { color: theme('colors.ink.600'); }
   .glass-dark {
     background: rgba(22, 25, 48, 0.55);
     backdrop-filter: blur(18px) saturate(140%);
