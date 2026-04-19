@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import type { KeyboardEvent, MouseEvent } from 'react';
-import { SIZE_OPTIONS, STYLES } from '../lib/constants';
+import {
+  PROMPT_DANGER_CHARS,
+  PROMPT_MAX_CHARS,
+  PROMPT_WARN_CHARS,
+  SIZE_OPTIONS,
+  STYLES,
+} from '../lib/constants';
 import { useFavorites } from '../context/FavoritesContext';
 import { CloseIcon, Spinner } from './icons';
 import type { BatchCount, GenerateParams, ImageSize, ImageStyle } from '../types';
@@ -19,8 +25,8 @@ const EXAMPLE_PROMPTS = [
 ];
 
 function charCountClass(length: number): string {
-  if (length > 900) return 'text-rose-500';
-  if (length > 800) return 'text-amber-500';
+  if (length > PROMPT_DANGER_CHARS) return 'text-rose-500';
+  if (length > PROMPT_WARN_CHARS) return 'text-amber-500';
   return 'text-ink-400';
 }
 
@@ -81,14 +87,14 @@ export function PromptCard({
             描述你想要的画面
           </label>
           <span className={`text-xs transition-colors ${charCountClass(promptValue.length)}`}>
-            {promptValue.length} / 1000
+            {promptValue.length} / {PROMPT_MAX_CHARS}
           </span>
         </div>
         <div className="relative">
           <textarea
             id="prompt"
             rows={4}
-            maxLength={1000}
+            maxLength={PROMPT_MAX_CHARS}
             placeholder="例如：夕阳下的京都老街，樱花飘落，电影感打光，4K 超精细..."
             value={promptValue}
             onChange={(e) => onPromptChange(e.target.value)}

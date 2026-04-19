@@ -1,3 +1,4 @@
+import { HISTORY_BADGE_CAP } from '../lib/constants';
 import { useTheme } from '../context/ThemeContext';
 import { ModelDropdown } from './ModelDropdown';
 
@@ -34,7 +35,7 @@ export function Header({
           </svg>
           {historyCount > 0 && (
             <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 px-1 text-[9px] font-bold leading-none text-white">
-              {historyCount > 99 ? '99+' : historyCount}
+              {historyCount > HISTORY_BADGE_CAP ? `${HISTORY_BADGE_CAP}+` : historyCount}
             </span>
           )}
         </button>

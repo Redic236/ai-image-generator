@@ -1,5 +1,16 @@
 import type { ImageModel, ImageSize, ImageStyle } from '../types';
 
+/** Hard cap on prompt textarea length. Also the denominator of the
+ *  visible char counter. */
+export const PROMPT_MAX_CHARS = 1000;
+/** Counter turns amber when the user crosses this threshold. */
+export const PROMPT_WARN_CHARS = 800;
+/** Counter turns rose at this threshold (approaching the hard cap). */
+export const PROMPT_DANGER_CHARS = 900;
+/** Show "99+" instead of an exact history count above this number
+ *  (keeps the badge from overflowing its circle). */
+export const HISTORY_BADGE_CAP = 99;
+
 export interface StylePreset {
   value: ImageStyle;
   label: string;
