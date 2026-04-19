@@ -18,6 +18,9 @@ interface UseOptimizerOptions {
 export function usePromptOptimizer({ onSuccess, requestOpenSettings }: UseOptimizerOptions) {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const { settings } = useSettings();
+  // Only depend on the primitives we actually read — avoids cascade
+  // re-renders when unrelated settings fields (e.g. model) change.
+  const { apiKey } = settings;
   const { showToast } = useToast();
 
   const optimize = useCallback(
@@ -27,7 +30,7 @@ export function usePromptOptimizer({ onSuccess, requestOpenSettings }: UseOptimi
         showToast('请先输入图片描述');
         return;
       }
-      if (!settings.apiKey) {
+      if (!apiKey) {
         requestOpenSettings();
         showToast('请先在设置中填写 API Key');
         return;
@@ -37,7 +40,7 @@ export function usePromptOptimizer({ onSuccess, requestOpenSettings }: UseOptimi
         const optimized = await optimizePrompt({
           prompt: raw,
           style,
-          apiKey: settings.apiKey,
+          apiKey,
         });
         onSuccess(optimized);
         showToast('提示词已优化');
@@ -48,7 +51,7 @@ export function usePromptOptimizer({ onSuccess, requestOpenSettings }: UseOptimi
         setIsOptimizing(false);
       }
     },
-    [settings, showToast, requestOpenSettings, onSuccess]
+    [apiKey, showToast, requestOpenSettings, onSuccess]
   );
 
   return { isOptimizing, optimize };

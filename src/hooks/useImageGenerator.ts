@@ -37,6 +37,9 @@ export function useImageGenerator({ requestOpenSettings }: UseImageGeneratorOpti
   const [isGenerating, setIsGenerating] = useState(false);
 
   const { settings } = useSettings();
+  // Destructure to primitives so useCallback deps don't invalidate when an
+  // unrelated settings field changes.
+  const { apiKey, model } = settings;
   const { add: addHistory, remove: removeHistory, setActiveId } = useHistory();
   const { showToast } = useToast();
 
@@ -56,8 +59,8 @@ export function useImageGenerator({ requestOpenSettings }: UseImageGeneratorOpti
       try {
         const { url } = await generateImage({
           ...params,
-          apiKey: settings.apiKey,
-          model: settings.model,
+          apiKey,
+          model,
         });
         const item = makeHistoryItem(params, url);
         addHistory(item);
@@ -78,7 +81,7 @@ export function useImageGenerator({ requestOpenSettings }: UseImageGeneratorOpti
         }
       }
     },
-    [settings, addHistory, setActiveId, updateTile]
+    [apiKey, model, addHistory, setActiveId, updateTile]
   );
 
   const generate = useCallback(
@@ -88,7 +91,7 @@ export function useImageGenerator({ requestOpenSettings }: UseImageGeneratorOpti
         showToast('请先输入图片描述');
         return;
       }
-      if (!settings.apiKey) {
+      if (!apiKey) {
         requestOpenSettings();
         showToast('请先在设置中填写 API Key');
         return;
@@ -112,7 +115,7 @@ export function useImageGenerator({ requestOpenSettings }: UseImageGeneratorOpti
 
       setIsGenerating(false);
     },
-    [settings, showToast, requestOpenSettings, setActiveId, runOneTile]
+    [apiKey, showToast, requestOpenSettings, setActiveId, runOneTile]
   );
 
   /** Re-run a single failed tile using the batch's params. */
