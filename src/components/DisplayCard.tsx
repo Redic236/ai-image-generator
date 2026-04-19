@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import JSZip from 'jszip';
 import { proxied } from '../lib/proxied';
 import { formatRelativeTime, formatSize } from '../lib/format';
 import { STYLE_LABEL } from '../lib/constants';
@@ -95,6 +94,9 @@ export function DisplayCard({ state, onGenerate, onRetryTile, onDismissTile }: D
     if (successfulTiles.length === 0) return;
     setZipping(true);
     try {
+      // Dynamic import — jszip is only loaded the first time a user clicks
+      // "download all", keeping the initial bundle ~40KB lighter.
+      const { default: JSZip } = await import('jszip');
       const zip = new JSZip();
       const fetched = await Promise.all(
         successfulTiles.map(async (tile) => {
