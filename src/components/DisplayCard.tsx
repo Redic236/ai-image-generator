@@ -48,7 +48,9 @@ export function DisplayCard({ state, onGenerate, onRetryTile, onDismissTile }: D
       const blob = await res.blob();
       const objectUrl = URL.createObjectURL(blob);
       triggerDownload(objectUrl, filename);
-      URL.revokeObjectURL(objectUrl);
+      // Defer revoke — Safari and slow-disk setups can still be starting
+      // the download when a sync revoke would cancel it.
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
       showToast('图片已开始下载');
     } catch {
       try {
@@ -111,7 +113,7 @@ export function DisplayCard({ state, onGenerate, onRetryTile, onDismissTile }: D
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       const url = URL.createObjectURL(zipBlob);
       triggerDownload(url, `ai-images-${Date.now()}.zip`);
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
       showToast(`已打包 ${successfulTiles.length} 张图片`);
     } catch {
       showToast('打包失败，部分图片可能无法访问');
